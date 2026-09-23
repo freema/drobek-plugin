@@ -1,0 +1,17 @@
+{
+  "name": "drobek",
+  "owner": {
+    "name": "Tomáš Grasl"
+  },
+  "metadata": {
+    "description": "drobek plugins for coding agents — build web apps directly in your drobek cloud workspace.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "drobek",
+      "source": "./plugins/drobek",
+      "description": "Build, preview and publish web apps in your drobek workspace over the drobek MCP server."
+    }
+  ]
+}

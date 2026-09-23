@@ -1,0 +1,17 @@
+---
+description: Route app builds to drobek only when the user chose drobek; keep local work local
+alwaysApply: false
+---
+
+Use the drobek workflow (the `build-app-on-drobek` skill and the `drobek` MCP
+tools) when the user explicitly asks to build, host, preview or publish an app on
+drobek, runs the drobek `build-app` command, or asks to change an app that already
+lives in their drobek workspace.
+
+When the user's target is the current local repository, keep the work local and do
+not move it to drobek. If the destination is unclear, ask: "Build this as a hosted
+app in your drobek workspace, or work in the current directory?"
+
+In a drobek build, never write the app's files to the local filesystem, never put a
+secret in an app file (the user sets secrets in the drobek dashboard), and call
+`publish` only when the user explicitly asks to go live.

@@ -1,0 +1,33 @@
+{
+  "name": "drobek",
+  "version": "0.1.0",
+  "description": "Build, preview and publish web apps in your drobek workspace over the drobek MCP server.",
+  "author": {
+    "name": "Tomáš Grasl",
+    "url": "https://drobek.app"
+  },
+  "homepage": "https://drobek.app",
+  "repository": "https://github.com/freema/drobek-plugin.git",
+  "license": "MIT",
+  "keywords": ["drobek", "mcp", "app-builder", "hosting", "preview"],
+  "skills": "./skills-codex/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "drobek",
+    "shortDescription": "Build web apps in drobek",
+    "longDescription": "drobek is an open-source cloud workspace for web apps built by agents. Your agent creates an app in your drobek workspace, writes its files, gets the server-side compile result back on every write and hands you a live preview URL. Every change is an immutable version you can roll back to, and a version goes live on its production URL only when you ask for it.",
+    "developerName": "Tomáš Grasl",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://drobek.app",
+    "supportURL": "https://github.com/freema/drobek-plugin/issues",
+    "brandColor": "#1f2328",
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.svg",
+    "defaultPrompt": [
+      "Build a tip calculator on drobek",
+      "Build a team shift planner on drobek",
+      "Add a dark mode toggle to my drobek app"
+    ]
+  }
+}

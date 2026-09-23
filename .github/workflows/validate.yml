@@ -1,0 +1,40 @@
+name: Validate
+
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.280
+
+      - name: claude plugin validate (marketplace + plugin)
+        run: npm run validate:claude
+
+      - name: Cursor validators
+        run: npm run validate:cursor
+
+      - name: Codex validator
+        run: npm run validate:codex
+
+      - name: drobek skill checks
+        run: npm run check

@@ -1,0 +1,20 @@
+{
+  "name": "drobek",
+  "interface": {
+    "displayName": "drobek"
+  },
+  "plugins": [
+    {
+      "name": "drobek",
+      "source": {
+        "source": "local",
+        "path": "./plugins/drobek"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    }
+  ]
+}

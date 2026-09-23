@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "drobek": {
+      "type": "http",
+      "url": "https://drobek.app/mcp"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "drobek",
+  "version": "0.1.0",
+  "description": "Build, preview and publish web apps in your drobek workspace over the drobek MCP server.",
+  "author": {
+    "name": "Tomáš Grasl",
+    "url": "https://drobek.app"
+  },
+  "homepage": "https://drobek.app",
+  "repository": "https://github.com/freema/drobek-plugin",
+  "license": "MIT",
+  "keywords": ["drobek", "mcp", "app-builder", "hosting", "preview"],
+  "skills": "./skills-claude",
+  "commands": "./commands",
+  "mcpServers": "./.mcp.json"
+}
