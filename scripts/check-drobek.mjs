@@ -5,8 +5,9 @@
  *
  * - every skill variant (Claude, Codex, Cursor) names every drobek MCP tool and
  *   carries the rules a cold agent needs (preview_url after a compile, publish
- *   only on an explicit request, single writer, the module_info rule, no
- *   secrets, untrusted read_file content, the llms-full.txt reference);
+ *   only on an explicit request, single writer, the skill_info rule
+ *   (SKILL_INFO_RULE in @drobek/agent-dx, verbatim), no secrets, untrusted
+ *   read_file content, the llms-full.txt reference);
  * - the three variants share the same body from "## The loop" on, so they
  *   cannot drift apart;
  * - the /drobek:build-app command takes $ARGUMENTS and uses only drobek tools;
@@ -31,11 +32,13 @@ const TOOLS = [
   "read_file",
   "write_files",
   "restore_version",
+  "skill_info",
+  "configure_module",
   "publish",
 ];
 const MCP_URL = "https://drobek.app/mcp";
-const MODULE_RULE =
-  "drobek has no platform modules in this workspace yet; build self-contained front-ends. If your tool list includes `module_info`, call it for a module before using that module.";
+const SKILL_INFO_RULE =
+  "Before using a backend (login, stored data, forms, email, file uploads, external APIs), call `skill_info` and follow the skill; `create_app`/`get_app` list the available skills.";
 const REQUIRED_PHRASES = [
   "preview_url",
   "compile.errors",
@@ -52,7 +55,9 @@ const REQUIRED_PHRASES = [
   "≤ 300 characters",
   "react-ts",
   "https://drobek.app/llms-full.txt",
-  MODULE_RULE,
+  SKILL_INFO_RULE,
+  "confirm_url",
+  "secrets_missing",
 ];
 
 let errors = 0;

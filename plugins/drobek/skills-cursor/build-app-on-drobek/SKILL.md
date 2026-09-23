@@ -12,8 +12,9 @@ every write and serves the result at the app's `preview_url`. Every write is an
 immutable version.
 
 The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
-`restore_version` and `publish`. Your client may show them with a prefix (for
-example `mcp__plugin_drobek_drobek__create_app`) — it is the same tool.
+`restore_version`, `skill_info`, `configure_module` and `publish`. Your client
+may show them with a prefix (for example
+`mcp__plugin_drobek_drobek__create_app`) — it is the same tool.
 
 ## When to use this
 
@@ -45,9 +46,9 @@ files.
    `drobek.json`) or `"html"` (a single `index.html`). `workspace` is a
    workspace `slug` from `list_apps`; leave it out for the user's personal
    workspace. Version 1 compiles right away. The response carries `app_id`,
-   `preview_url` and the **briefing** — read the whole briefing before you
-   write anything; it is the contract (stack, file rules, import map, limits,
-   rules).
+   `preview_url`, the **briefing** and `skills` (the backends this server
+   offers) — read the whole briefing before you write anything; it is the
+   contract (stack, file rules, import map, limits, rules).
 3. **`write_files({ app_id, files, reasoning })`** — `files` holds 1–20
    changes applied on top of the latest version: `{ path, content }` writes the
    FULL content of a text file (never a diff), `{ path, delete: true }` removes
@@ -64,7 +65,9 @@ files.
      and `text` — and call `write_files` again with the corrected files.
      `unresolved_import` means a bare import is missing from `drobek.json`
      `imports`: add it with a pinned `https://esm.sh/<package>@<version>` URL
-     (keep the existing entries) or fix the relative path.
+     (keep the existing entries) or fix the relative path. An error with a
+     `hint` like `skill_info('data')` means that package is replaced by a
+     drobek skill — follow the hint.
 5. **Iterate** with more `write_files` calls. `read_file({ app_id, path,
    version? })` returns one file before you edit a file you did not just
    write. `get_app({ app_id })` re-orients you: the briefing, files, the last
@@ -97,8 +100,23 @@ files.
 - The app's Content Security Policy allows scripts only from the app itself
   and https://esm.sh, and `fetch` only to the app's own origin and esm.sh —
   calls to other APIs are blocked by the browser.
-- drobek has no platform modules in this workspace yet; build self-contained front-ends. If your tool list includes `module_info`, call it for a module before using that module.
-  Keep state in the browser (for example `localStorage`).
+- A backend comes only from drobek's platform modules, used through
+  `import { drobek } from 'drobek'` (no `drobek.json` entry needed).
+  Before using a backend (login, stored data, forms, email, file uploads, external APIs), call `skill_info` and follow the skill; `create_app`/`get_app` list the available skills.
+  - `skill_info()` lists the skills with a "use when…" sentence; an empty
+    list means this server has no backends — build a self-contained
+    front-end and keep state in the browser (for example `localStorage`).
+  - `skill_info({ name })` returns the skill: minimal working code, the exact
+    SDK calls and types, the module's config schema, limits and common
+    errors.
+  - `configure_module({ app_id, module, config })` sets a module's config for
+    the app (`config` holds only the keys you change). A sensitive change
+    comes back `applied: false` with `pending_confirmation` and a
+    `confirm_url`: give the user that link and say what needs their OK — it
+    applies only after they confirm it in the drobek dashboard.
+  - Secrets (API keys) are entered by the app owner in the drobek dashboard;
+    `secrets_missing` names the unset ones. Never ask for a value and never
+    put one in a file or a config.
 
 ## Rules
 
