@@ -83,6 +83,43 @@ The three skills share one body: `list_apps` → `create_app` (read the briefing
 `preview_url` → `publish` only on an explicit request. The authoritative tool
 contract is [drobek.app/llms-full.txt](https://drobek.app/llms-full.txt).
 
+## The drobek MCP tools
+
+The server shows each client only the tools its grant allows (`read`, `write`,
+`publish` on the consent screen). Every tool carries the MCP annotations
+`readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`.
+
+| Tool | Scope | Annotations | What it does |
+| --- | --- | --- | --- |
+| `list_apps` | read | read-only | You, your workspaces with your role, and the apps in them. Start here. |
+| `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
+| `get_app` | read | read-only | One app: briefing, files, last 20 versions, module configs (secrets as `hasSecret` only), the write lock. |
+| `read_file` | read | read-only | One file of a version, inside an untrusted envelope. |
+| `write_files` | write | destructive | 1–20 file changes → one new version → one server-side compile (the result comes back). |
+| `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
+| `skill_info` | read | read-only | The server's skills: the list, or one skill's Markdown with SDK types, config schema and limits. |
+| `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation. |
+| `query_data` | read | read-only | Records of one of the app's data collections (≤ 100 per call), inside an untrusted envelope. |
+| `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`) or request stats (`requests`). |
+| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. |
+
+## The skills `skill_info` offers
+
+With the six built-in platform modules active (the production compose default)
+`skill_info()` lists nine skills; a self-hosted server lists the modules it runs:
+
+| Skill | Kind | Use when |
+| --- | --- | --- |
+| `auth` | module | people must sign in to the app (invited e-mails, a company domain, admins, per-user data) |
+| `data` | module | the app stores records (lists, todos, entries, votes) |
+| `forms` | module | visitors fill in a form and the answers must be kept or e-mailed to the owner |
+| `email` | module | the app must tell its owners about something by e-mail |
+| `files` | module | people upload files the app keeps (photos, PDFs, CSVs) |
+| `proxy` | module | the app calls an external API that needs a secret key |
+| `start` | general | creating or changing an app: files, `drobek.json`, the write → preview → publish loop |
+| `debug` | general | a write did not compile, the preview is broken, or a module call fails |
+| `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
+
 ## Self-hosted drobek
 
 drobek is AGPL and self-hostable ([freema/drobek](https://github.com/freema/drobek)).

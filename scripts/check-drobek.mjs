@@ -34,6 +34,8 @@ const TOOLS = [
   "restore_version",
   "skill_info",
   "configure_module",
+  "query_data",
+  "get_logs",
   "publish",
 ];
 const MCP_URL = "https://drobek.app/mcp";
@@ -58,6 +60,11 @@ const REQUIRED_PHRASES = [
   SKILL_INFO_RULE,
   "confirm_url",
   "secrets_missing",
+  "app_locked_by_admin",
+  "get_logs({ app_id, kind:",
+  "`start`",
+  "`debug`",
+  "`ui`",
 ];
 
 let errors = 0;
