@@ -11,7 +11,11 @@
  * - the three variants share the same body from "## The loop" on, so they
  *   cannot drift apart;
  * - the /drobek:build-app command takes $ARGUMENTS and uses only drobek tools;
- * - all manifests carry the same version and point at the same MCP endpoint;
+ * - all manifests carry the same version; the server origin is configurable
+ *   (DROBEK_URL, default https://drobek.app): Claude Code's .mcp.json expands
+ *   ${DROBEK_URL:-https://drobek.app}/mcp, Codex and Cursor (no env expansion
+ *   with a default in a plugin's MCP config) use .mcp.hosted.json with the
+ *   hosted endpoint, and the skills never assume drobek.app for app hosts;
  * - no file in the repository contains a drobek API key (drk_…).
  *
  * The tool list mirrors TOOL_DOCS in @drobek/agent-dx (freema/drobek) — keep
@@ -38,7 +42,15 @@ const TOOLS = [
   "get_logs",
   "publish",
 ];
-const MCP_URL = "https://drobek.app/mcp";
+const DEFAULT_ORIGIN = "https://drobek.app";
+const HOSTED_MCP_URL = `${DEFAULT_ORIGIN}/mcp`;
+const CLAUDE_MCP_URL = `\${DROBEK_URL:-${DEFAULT_ORIGIN}}/mcp`;
+/** Which MCP config each host's manifest points at, and the URL it must carry. */
+const MCP_CONFIGS = {
+  "plugins/drobek/.claude-plugin/plugin.json": { file: "./.mcp.json", url: CLAUDE_MCP_URL },
+  "plugins/drobek/.cursor-plugin/plugin.json": { file: "./.mcp.hosted.json", url: HOSTED_MCP_URL },
+  "plugins/drobek/.codex-plugin/plugin.json": { file: "./.mcp.hosted.json", url: HOSTED_MCP_URL },
+};
 const SKILL_INFO_RULE =
   "Before using a backend (login, stored data, forms, email, file uploads, external APIs), call `skill_info` and follow the skill; `create_app`/`get_app` list the available skills.";
 const REQUIRED_PHRASES = [
@@ -57,6 +69,8 @@ const REQUIRED_PHRASES = [
   "≤ 300 characters",
   "react-ts",
   "https://drobek.app/llms-full.txt",
+  "`<slug>.<APPS_DOMAIN>`",
+  "never assume `drobek.app`",
   SKILL_INFO_RULE,
   "confirm_url",
   "secrets_missing",
@@ -94,7 +108,7 @@ for (const variant of variants) {
   for (const phrase of REQUIRED_PHRASES) {
     if (!md.includes(phrase)) fail(`${rel}: missing required text: ${JSON.stringify(phrase)}`);
   }
-  if (!md.includes(MCP_URL)) fail(`${rel}: does not name the MCP endpoint ${MCP_URL}`);
+  if (!md.includes(HOSTED_MCP_URL)) fail(`${rel}: does not name the default MCP endpoint ${HOSTED_MCP_URL}`);
   const loop = md.indexOf("## The loop");
   if (loop === -1) fail(`${rel}: missing "## The loop"`);
   else bodies.set(variant, md.slice(loop));
@@ -108,6 +122,15 @@ for (const variant of rest) {
 const claudeSkill = read("plugins/drobek/skills-claude/build-app-on-drobek/SKILL.md");
 if (!claudeSkill.includes("only after the user has chosen drobek")) {
   fail("skills-claude: the Claude variant must only act after the user has chosen drobek");
+}
+if (!claudeSkill.includes("`DROBEK_URL`")) fail("skills-claude: must name the DROBEK_URL setting");
+const codexSkill = read("plugins/drobek/skills-codex/build-app-on-drobek/SKILL.md");
+if (!codexSkill.includes("codex mcp add drobek --url")) {
+  fail("skills-codex: must say how to connect a self-hosted drobek (codex mcp add drobek --url)");
+}
+const cursorSkill = read("plugins/drobek/skills-cursor/build-app-on-drobek/SKILL.md");
+if (!cursorSkill.includes("~/.cursor/mcp.json")) {
+  fail("skills-cursor: must say how to connect a self-hosted drobek (~/.cursor/mcp.json)");
 }
 
 // --- command + rule -------------------------------------------------------
@@ -141,9 +164,25 @@ const distinct = new Set(versions.values());
 if (distinct.size !== 1) {
   fail(`manifest versions differ: ${JSON.stringify(Object.fromEntries(versions))}`);
 }
-const mcp = JSON.parse(read("plugins/drobek/.mcp.json"));
-if (mcp.mcpServers?.drobek?.url !== MCP_URL) fail(`.mcp.json: mcpServers.drobek.url must be ${MCP_URL}`);
-if (mcp.mcpServers?.drobek?.headers) fail(".mcp.json: must not carry headers (OAuth only; no credentials in the plugin)");
+for (const [rel, expected] of Object.entries(MCP_CONFIGS)) {
+  const manifest = JSON.parse(read(rel));
+  if (manifest.mcpServers !== expected.file) {
+    fail(`${rel}: mcpServers must be ${expected.file} (got ${JSON.stringify(manifest.mcpServers)})`);
+    continue;
+  }
+  const mcpRel = path.posix.join("plugins/drobek", expected.file);
+  const server = JSON.parse(read(mcpRel)).mcpServers?.drobek;
+  if (server?.url !== expected.url) fail(`${mcpRel}: mcpServers.drobek.url must be ${expected.url}`);
+  if (server?.headers) fail(`${mcpRel}: must not carry headers (OAuth only; no credentials in the plugin)`);
+}
+
+// --- the server URL setting is documented --------------------------------
+for (const rel of ["README.md", "plugins/drobek/README.md"]) {
+  const readme = read(rel).replace(/\s+/g, " ");
+  for (const phrase of ["DROBEK_URL", DEFAULT_ORIGIN, "no trailing slash", "no `/mcp`", "drobek.example.com", "happens against that same origin"]) {
+    if (!readme.includes(phrase)) fail(`${rel}: the DROBEK_URL section is missing ${JSON.stringify(phrase)}`);
+  }
+}
 
 // --- no API keys anywhere -------------------------------------------------
 function walk(dir) {

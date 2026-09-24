@@ -14,6 +14,6 @@
   "skills": "./skills-cursor/",
   "rules": "./rules/",
   "commands": "./commands/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.mcp.hosted.json",
   "logo": "./assets/logo.svg"
 }

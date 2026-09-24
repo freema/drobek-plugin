@@ -1,15 +1,19 @@
 # drobek plugins for coding agents
 
-[drobek](https://drobek.app) is an open-source cloud workspace for web apps built
-by agents. With the **drobek** plugin, your agent (Claude Code, Codex or Cursor)
-works directly in your drobek workspace: it creates an app, writes its files, gets
+[drobek](https://github.com/freema/drobek) is an open-source (AGPL),
+self-hostable cloud workspace for web apps built by agents — use the hosted
+instance at [drobek.app](https://drobek.app) or run your own. With the
+**drobek** plugin, your agent (Claude Code, Codex or Cursor) works directly in
+your drobek workspace: it creates an app, writes its files, gets
 the server-side compile result back on every write and hands you a live preview
 URL. Every change is an immutable version, and a version goes live on its
 production URL only when you ask for it.
 
-The plugin connects the drobek MCP server at `https://drobek.app/mcp` (OAuth 2.1 —
-you sign in to drobek in the browser and approve the scopes) and teaches the agent
-the build loop.
+The plugin connects the MCP server of your drobek server, `<origin>/mcp` (OAuth
+2.1 — you sign in to that drobek in the browser and approve the scopes), and
+teaches the agent the build loop. The origin defaults to the hosted
+`https://drobek.app`; to use a self-hosted drobek, see
+[Server URL](#server-url-drobek_url).
 
 ## Claude Code
 
@@ -29,6 +33,9 @@ sign in. Build an app:
 The agent replies with the app's preview URL. Ask it to publish when you want the
 app live.
 
+For a self-hosted drobek, start Claude Code with `DROBEK_URL` set to its origin
+(see [Server URL](#server-url-drobek_url)).
+
 ## Codex
 
 ```sh
@@ -40,9 +47,19 @@ codex mcp login drobek
 `codex mcp login drobek` opens the drobek sign-in in your browser; restart Codex
 afterwards so it loads the drobek tools.
 
+Codex does not expand environment variables in a plugin's MCP config, so the
+plugin connects the hosted `https://drobek.app/mcp`. For a self-hosted drobek,
+add your endpoint under the same name before the login — a `drobek` server in
+your `~/.codex/config.toml` takes the place of the plugin's:
+
+```sh
+codex mcp add drobek --url https://drobek.example.com/mcp
+codex mcp login drobek
+```
+
 ## Cursor
 
-**One-click MCP install**
+**One-click MCP install** (the hosted drobek)
 
 [Add drobek to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=drobek&config=eyJ1cmwiOiJodHRwczovL2Ryb2Jlay5hcHAvbWNwIn0=)
 
@@ -62,16 +79,24 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=drobek&config=eyJ1cmwiOiJodH
 }
 ```
 
-Sign in when Cursor asks; the server then shows as connected under Settings →
-Tools & MCP. The plugin in this repository (`.cursor-plugin/`) adds the
+For a self-hosted drobek, put your origin in `url` instead
+(`https://drobek.example.com/mcp`), or read it from the environment with
+Cursor's interpolation: `"url": "${env:DROBEK_URL}/mcp"` (`DROBEK_URL` must
+then be set wherever Cursor starts). Sign in when Cursor asks; the server then
+shows as connected under Settings → Tools & MCP.
+
+The plugin in this repository (`.cursor-plugin/`) adds the
 `build-app-on-drobek` skill, the `route-app-builds-to-drobek` rule and the
-`build-app` command on top of the MCP server.
+`build-app` command on top of the MCP server. It also bundles the hosted
+server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
+`drobek` entry and turn the plugin's server off under Settings → Tools & MCP.
 
 ## What the plugin ships
 
 | Piece | Role |
 | --- | --- |
-| `plugins/drobek/.mcp.json` | The `drobek` MCP server (`https://drobek.app/mcp`, OAuth 2.1) for all three hosts. |
+| `plugins/drobek/.mcp.json` | Claude Code: the `drobek` MCP server at `${DROBEK_URL:-https://drobek.app}/mcp` (OAuth 2.1). |
+| `plugins/drobek/.mcp.hosted.json` | Codex and Cursor: the `drobek` MCP server at `https://drobek.app/mcp` (neither expands an env var with a default in a plugin's MCP config). |
 | `skills-claude/build-app-on-drobek` | Claude Code workflow — used only once the user has chosen drobek. |
 | `skills-codex/build-app-on-drobek` | Codex workflow. |
 | `skills-cursor/build-app-on-drobek` | Cursor workflow. |
@@ -80,8 +105,11 @@ Tools & MCP. The plugin in this repository (`.cursor-plugin/`) adds the
 
 The three skills share one body: `list_apps` → `create_app` (read the briefing) →
 `write_files` (fix `compile.errors` until it compiles) → give the user the
-`preview_url` → `publish` only on an explicit request. The authoritative tool
-contract is [drobek.app/llms-full.txt](https://drobek.app/llms-full.txt).
+`preview_url` → `publish` only on an explicit request. They take every URL from
+the tool results and never assume `drobek.app` — app hosts are
+`<slug>.<APPS_DOMAIN>` of the server you use. The authoritative tool contract is
+`<origin>/llms-full.txt` of your drobek server (hosted:
+[drobek.app/llms-full.txt](https://drobek.app/llms-full.txt)).
 
 ## The drobek MCP tools
 
@@ -120,13 +148,40 @@ With the six built-in platform modules active (the production compose default)
 | `debug` | general | a write did not compile, the preview is broken, or a module call fails |
 | `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
 
-## Self-hosted drobek
+## Server URL (`DROBEK_URL`)
 
 drobek is AGPL and self-hostable ([freema/drobek](https://github.com/freema/drobek)).
-The plugin's MCP server points at `https://drobek.app/mcp`; for your own instance,
-connect your agent to `<your drobek origin>/mcp` and use the skill from the drobek
-repository (`skills/drobek`) — its build page `<your drobek origin>/build-with-your-agent`
-shows the exact commands.
+The plugin talks to one drobek server, set by its origin:
+
+- **Setting:** `DROBEK_URL` — the origin only: scheme + host (+ port), no
+  trailing slash, no `/mcp`. Example: `https://drobek.example.com`.
+- **Default:** `https://drobek.app` (the hosted drobek).
+- **MCP endpoint:** `$DROBEK_URL/mcp`.
+
+**Claude Code** expands `${DROBEK_URL:-https://drobek.app}/mcp` in the plugin's
+`.mcp.json` when it starts. Set the variable in your shell:
+
+```sh
+export DROBEK_URL=https://drobek.example.com
+claude
+```
+
+or for every session in `~/.claude/settings.json`:
+
+```json
+{ "env": { "DROBEK_URL": "https://drobek.example.com" } }
+```
+
+Leave it unset for the hosted drobek. `claude mcp get plugin:drobek:drobek`
+shows the URL in use. **Codex** and **Cursor** do not expand a variable with a
+default in a plugin's MCP config: add your endpoint as described under
+[Codex](#codex) and [Cursor](#cursor).
+
+The OAuth sign-in (`/mcp` in Claude Code, `codex mcp login drobek`, Cursor's
+sign-in) happens against that same origin: you sign in with your account on
+that drobek server and approve the scopes on its consent screen. After changing
+the URL, sign in again. The server's own setup page,
+`<origin>/build-with-your-agent`, shows its MCP endpoint.
 
 ## Development
 
@@ -143,8 +198,10 @@ npm run validate
   (`scripts/validate-*.mjs`, adapted from langtail/macaly-code-plugin — see
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md));
 - `scripts/check-drobek.mjs`: every skill names every drobek tool and carries the
-  loop rules, the three skills share one body, all manifests carry one version, and
-  no drobek API key is in the repository.
+  loop rules, the three skills share one body, all manifests carry one version,
+  each host's MCP config carries its URL (`DROBEK_URL` for Claude Code, the hosted
+  endpoint for Codex and Cursor), both READMEs document `DROBEK_URL`, and no
+  drobek API key is in the repository.
 
 When the drobek MCP tool surface changes, update the skills and the tool list in
 `scripts/check-drobek.mjs` together with `TOOL_DOCS` in the drobek repository.

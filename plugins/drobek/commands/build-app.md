@@ -17,7 +17,7 @@ filesystem, run npm or start a local server.
 
 1. `list_apps({})` to confirm the connection and see the user's workspaces. If
    the drobek tools are missing or answer 401, ask the user to connect and sign in
-   to the drobek MCP server (in Claude Code: `/mcp`), then stop.
+   to their drobek MCP server (in Claude Code: `/mcp`), then stop.
 2. `create_app({ name })` with a short, human-readable name derived from the
    request (template `react-ts` is the default; use `"html"` only for a single
    static page). Read the returned **briefing** in full before writing code.
@@ -33,7 +33,9 @@ filesystem, run npm or start a local server.
    browser.
 4. If `compile.ok` is false, fix each `compile.errors` entry (file, line, column,
    text) and call `write_files` again until it compiles.
-5. Reply with the `preview_url` and a two-line summary of what the app does.
+5. Reply with the `preview_url` exactly as the tool returned it (the user's
+   drobek server may be self-hosted — never build an app URL yourself or
+   assume `drobek.app`) and a two-line summary of what the app does.
    Do **not** call `publish` unless the user explicitly asks to go live.
 
 Never put API keys, tokens or passwords in app files — if the app needs one,

@@ -5,11 +5,12 @@ description: Build and host a web app in the user's drobek cloud workspace when 
 
 # Build an app on drobek
 
-drobek is an open-source cloud workspace for web apps built by agents. You
-work directly in the user's drobek workspace through the `drobek` MCP server:
-you create an app, write its files, and drobek compiles them on the server on
-every write and serves the result at the app's `preview_url`. Every write is an
-immutable version.
+drobek is an open-source, self-hostable cloud workspace for web apps built by
+agents. The user's drobek server is the hosted https://drobek.app by default,
+or their own instance. You work directly in the user's drobek workspace
+through the `drobek` MCP server: you create an app, write its files, and
+drobek compiles them on the server on every write and serves the result at
+the app's `preview_url`. Every write is an immutable version.
 
 The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`
@@ -27,12 +28,15 @@ app in your drobek workspace, or work in the current directory?"
 
 ## Connect
 
-The `drobek` MCP server (`https://drobek.app/mcp`) uses OAuth 2.1. If the
+The `drobek` MCP server is the `/mcp` endpoint of the user's drobek server:
+the plugin connects the hosted `https://drobek.app/mcp`; for a self-hosted
+drobek the user runs `codex mcp add drobek --url <their drobek origin>/mcp`,
+which takes the place of the plugin's server. It uses OAuth 2.1. If the
 drobek tools are missing, or a call fails with 401 / `invalid_token`, the
 server is not authenticated yet: ask the user to run
-`codex mcp login drobek`, sign in to drobek in the browser and approve `read`
-and `write` (and `publish` if you are to publish), then restart Codex. Do not
-work around a missing connection with local files.
+`codex mcp login drobek`, sign in to their drobek server in the browser and
+approve `read` and `write` (and `publish` if you are to publish), then
+restart Codex. Do not work around a missing connection with local files.
 
 ## The loop
 
@@ -160,6 +164,13 @@ work around a missing connection with local files.
   arguments as the message says.
 - **Stay in drobek.** For a drobek app, do not scaffold local files, run
   npm/vite, or start a local server — the app lives in the workspace.
+- **Your server's URLs.** drobek is self-hostable, so the server you are
+  connected to need not be drobek.app. Give the user every URL exactly as a
+  tool returned it (`preview_url`, `published_url`, `confirm_url`). Never
+  build an app URL yourself and never assume `drobek.app` for an app: app
+  hosts are `<slug>.<APPS_DOMAIN>`, and the server's operator sets
+  `APPS_DOMAIN`. The drobek dashboard is on the origin of the MCP server you
+  are connected to.
 
 ## Reporting back
 
@@ -171,6 +182,7 @@ explicit publish request.
 
 The authoritative, always-current contract — every tool with its inputs,
 result shape and an example call, the full briefing, limits and the error
-catalogue — is https://drobek.app/llms-full.txt (on a self-hosted drobek:
-`<your drobek origin>/llms-full.txt`). Once connected you can also read the
-MCP resource `drobek://docs/llms-full` without web access.
+catalogue — is `/llms-full.txt` on the origin of the drobek server you are
+connected to (on the hosted drobek: https://drobek.app/llms-full.txt). Once
+connected you can also read the MCP resource `drobek://docs/llms-full`
+without web access — it always matches the server you use.

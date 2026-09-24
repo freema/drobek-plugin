@@ -2,7 +2,7 @@
   "mcpServers": {
     "drobek": {
       "type": "http",
-      "url": "${DROBEK_URL:-https://drobek.app}/mcp"
+      "url": "https://drobek.app/mcp"
     }
   }
 }

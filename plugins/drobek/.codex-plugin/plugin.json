@@ -11,7 +11,7 @@
   "license": "MIT",
   "keywords": ["drobek", "mcp", "app-builder", "hosting", "preview"],
   "skills": "./skills-codex/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.mcp.hosted.json",
   "interface": {
     "displayName": "drobek",
     "shortDescription": "Build web apps in drobek",
