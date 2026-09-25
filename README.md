@@ -15,6 +15,22 @@ teaches the agent the build loop. The origin defaults to the hosted
 `https://drobek.app`; to use a self-hosted drobek, see
 [Server URL](#server-url-drobek_url).
 
+## Quick start with npx
+
+```sh
+npx drobek-plugin                                        # setup steps for Claude Code, Codex and Cursor
+npx drobek-plugin cursor --url https://drobek.example.com # one agent, a self-hosted drobek
+```
+
+The npm package [`drobek-plugin`](https://www.npmjs.com/package/drobek-plugin)
+only prints: it never edits your agent's config and never asks for a key. It
+also carries the plugin itself, so Claude Code can load it without the
+marketplace:
+
+```sh
+claude --plugin-dir "$(npx -y drobek-plugin path)"
+```
+
 ## Claude Code
 
 ```sh
@@ -187,6 +203,7 @@ the URL, sign in again. The server's own setup page,
 
 ```sh
 npm ci
+npm test          # the npx CLI
 npm run validate
 ```
 
@@ -205,6 +222,16 @@ npm run validate
 
 When the drobek MCP tool surface changes, update the skills and the tool list in
 `scripts/check-drobek.mjs` together with `TOOL_DOCS` in the drobek repository.
+
+## Releasing to npm
+
+Bump the version in `package.json` and in every plugin and marketplace manifest
+(`npm run check` fails when they differ), then:
+
+```sh
+npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
+npm publish
+```
 
 ## License
 

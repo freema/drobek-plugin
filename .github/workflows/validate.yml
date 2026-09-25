@@ -24,6 +24,9 @@ jobs:
 
       - run: npm ci
 
+      - name: npx CLI tests
+        run: npm test
+
       - name: Install the Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.280
 

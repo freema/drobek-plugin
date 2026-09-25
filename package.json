@@ -1,16 +1,48 @@
 {
   "name": "drobek-plugin",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
-  "description": "drobek plugins for Claude Code, Codex and Cursor.",
+  "description": "drobek plugin for Claude Code, Codex and Cursor — your agent builds, previews and publishes web apps in your drobek workspace over MCP.",
+  "keywords": [
+    "drobek",
+    "mcp",
+    "claude-code",
+    "codex",
+    "cursor",
+    "plugin",
+    "app-builder",
+    "hosting"
+  ],
+  "homepage": "https://github.com/freema/drobek-plugin#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freema/drobek-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/freema/drobek-plugin/issues"
+  },
+  "author": "Tomáš Grasl",
+  "bin": {
+    "drobek-plugin": "bin/drobek-plugin.mjs"
+  },
+  "files": [
+    "bin/",
+    "plugins/",
+    ".claude-plugin/",
+    ".cursor-plugin/",
+    ".agents/",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
     "validate": "npm run validate:claude && npm run validate:cursor && npm run validate:codex && npm run check",
     "validate:claude": "claude plugin validate --strict . && claude plugin validate --strict plugins/drobek && node scripts/validate-claude-components.mjs",
     "validate:cursor": "node scripts/validate-cursor-schema.mjs && node scripts/validate-cursor-structure.mjs",
     "validate:codex": "node scripts/validate-codex.mjs",
-    "check": "node scripts/check-drobek.mjs"
+    "check": "node scripts/check-drobek.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "ajv": "^8.18.0",

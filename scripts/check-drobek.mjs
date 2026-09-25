@@ -153,6 +153,7 @@ const manifests = [
   "plugins/drobek/.claude-plugin/plugin.json",
   "plugins/drobek/.cursor-plugin/plugin.json",
   "plugins/drobek/.codex-plugin/plugin.json",
+  "package.json",
 ];
 const versions = new Map();
 for (const rel of manifests) {
