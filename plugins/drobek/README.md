@@ -14,8 +14,12 @@ you ask. drobek is self-hostable: the plugin works against the hosted
   user has chosen drobek).
 - `skills-codex/build-app-on-drobek` — the Codex workflow.
 - `skills-cursor/build-app-on-drobek` — the Cursor workflow.
+- `skills-{claude,codex,cursor}/port-artifact-to-drobek` — move a Claude
+  artifact to drobek (text files unchanged, every binary through a single-use
+  upload URL at the same path).
 - `rules/route-app-builds-to-drobek.mdc` — the Cursor routing rule.
 - `commands/build-app.md` — `/drobek:build-app <idea>`.
+- `commands/port-artifact.md` — `/drobek:port-artifact <path>`.
 
 ## Server URL
 

@@ -1,7 +1,7 @@
 {
   "name": "drobek",
   "displayName": "drobek",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Build, preview and publish web apps in your drobek workspace over the drobek MCP server.",
   "author": {
     "name": "Tomáš Grasl"
