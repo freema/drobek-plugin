@@ -226,12 +226,17 @@ When the drobek MCP tool surface changes, update the skills and the tool list in
 ## Releasing to npm
 
 Bump the version in `package.json` and in every plugin and marketplace manifest
-(`npm run check` fails when they differ), then:
+(`npm run check` fails when they differ), commit, then tag and push:
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-npm publish
+git tag v0.2.1 && git push origin v0.2.1
 ```
+
+The tag runs `.github/workflows/release.yml`, which tests the package and
+publishes it with npm Trusted Publishing (OIDC, provenance attached) — no npm
+token lives in the repository. The npm package trusts that workflow under
+*Settings → Trusted Publisher* on npmjs.com.
 
 ## License
 

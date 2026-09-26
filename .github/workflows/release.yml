@@ -1,0 +1,40 @@
+name: Release to npm
+
+# Pushing a tag vX.Y.Z publishes drobek-plugin@X.Y.Z. npm trusts this workflow
+# through Trusted Publishing (OIDC): no npm token is stored in the repository.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing needs npm 11.5.1 or newer; Node 22 ships npm 10.
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - name: Tag matches package.json
+        run: |
+          v="$(node -p 'require("./package.json").version')"
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$v"; exit 1; }
+
+      - run: npm test
+
+      - name: drobek skill checks (versions in every manifest agree)
+        run: npm run check
+
+      - run: npm publish --access public
