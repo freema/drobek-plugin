@@ -10,7 +10,14 @@
  *   read_file content, the llms-full.txt reference);
  * - the three variants share the same body from "## The loop" on, so they
  *   cannot drift apart;
- * - the /drobek:build-app command takes $ARGUMENTS and uses only drobek tools;
+ * - the port-artifact-to-drobek skill (Claude, Codex, Cursor) carries the
+ *   artifact port (text files unchanged via write_files, every binary via
+ *   create_asset_upload + curl -T, never base64; publish on request; the
+ *   gallery only with user_confirmed after an explicit yes; the artifact ↔
+ *   drobek differences) and its variants share the body from
+ *   "## The procedure" on;
+ * - the /drobek:build-app and /drobek:port-artifact commands take $ARGUMENTS
+ *   and use only drobek tools;
  * - all manifests carry the same version; the server origin is configurable
  *   (DROBEK_URL, default https://drobek.app): Claude Code's .mcp.json expands
  *   ${DROBEK_URL:-https://drobek.app}/mcp, Codex and Cursor (no env expansion
@@ -40,7 +47,11 @@ const TOOLS = [
   "configure_module",
   "query_data",
   "get_logs",
+  "create_asset_upload",
+  "list_assets",
+  "delete_asset",
   "publish",
+  "set_gallery_listing",
 ];
 const DEFAULT_ORIGIN = "https://drobek.app";
 const HOSTED_MCP_URL = `${DEFAULT_ORIGIN}/mcp`;
@@ -79,6 +90,35 @@ const REQUIRED_PHRASES = [
   "`start`",
   "`debug`",
   "`ui`",
+  "`port-artifact`",
+  "never paste a binary as base64",
+  "create_asset_upload({ app_id, path, size, content_type? })",
+  "curl -T",
+  "user_confirmed: true",
+  "user_confirmation_required",
+  "Never list\n   an app on your own initiative",
+  "module_not_enabled",
+  "skill_info({ name, app_id })",
+  "`port-artifact-to-drobek`",
+];
+const PORT_TOOLS = ["create_app", "write_files", "create_asset_upload", "list_assets", "delete_asset", "get_logs", "publish", "set_gallery_listing"];
+const PORT_PHRASES = [
+  "fetches\nnothing from claude.ai",
+  "never base64 through a tool\n   call",
+  "SAME relative path",
+  "curl -fsS -T",
+  "Publish only when the user explicitly asks",
+  "user_confirmed: true",
+  "Only after an explicit yes",
+  "https://esm.sh",
+  "`window.claude.*`",
+  "`window.storage`",
+  "`<iframe>`",
+  "stat -c %s",
+  "skill_info('port-artifact')",
+  SKILL_INFO_RULE,
+  "never assume `drobek.app`",
+  "https://drobek.app/llms-full.txt",
 ];
 
 let errors = 0;
@@ -133,6 +173,33 @@ if (!cursorSkill.includes("~/.cursor/mcp.json")) {
   fail("skills-cursor: must say how to connect a self-hosted drobek (~/.cursor/mcp.json)");
 }
 
+// --- the port-artifact skill ---------------------------------------------
+const portBodies = new Map();
+for (const variant of variants) {
+  const rel = `plugins/drobek/${variant}/port-artifact-to-drobek/SKILL.md`;
+  const md = read(rel);
+  if (!/^---\nname: port-artifact-to-drobek\n/.test(md)) {
+    fail(`${rel}: frontmatter must start with name: port-artifact-to-drobek`);
+  }
+  for (const tool of PORT_TOOLS) {
+    if (!md.includes(`\`${tool}\``) && !md.includes(`${tool}(`)) fail(`${rel}: does not mention the ${tool} tool`);
+  }
+  for (const phrase of PORT_PHRASES) {
+    if (!md.includes(phrase)) fail(`${rel}: missing required text: ${JSON.stringify(phrase)}`);
+  }
+  const start = md.indexOf("## The procedure");
+  if (start === -1) fail(`${rel}: missing "## The procedure"`);
+  else portBodies.set(variant, md.slice(start));
+}
+for (const variant of rest) {
+  if (portBodies.has(first) && portBodies.has(variant) && portBodies.get(first) !== portBodies.get(variant)) {
+    fail(`${variant}/port-artifact-to-drobek: the body from "## The procedure" on differs from ${first} — keep the variants in sync`);
+  }
+}
+if (!read("plugins/drobek/skills-claude/port-artifact-to-drobek/SKILL.md").includes("/drobek:port-artifact")) {
+  fail("skills-claude/port-artifact-to-drobek: must name the /drobek:port-artifact command");
+}
+
 // --- command + rule -------------------------------------------------------
 const command = read("plugins/drobek/commands/build-app.md");
 if (!command.includes("$ARGUMENTS")) fail("commands/build-app.md: must use $ARGUMENTS");
@@ -142,6 +209,17 @@ for (const tool of ["list_apps", "create_app", "write_files", "publish"]) {
 if (!command.includes("preview_url")) fail("commands/build-app.md: must return the preview_url");
 if (!/Do \*\*not\*\* call `publish` unless the user explicitly asks/.test(command)) {
   fail("commands/build-app.md: must forbid publishing without an explicit request");
+}
+const port = read("plugins/drobek/commands/port-artifact.md");
+if (!port.includes("$ARGUMENTS")) fail("commands/port-artifact.md: must use $ARGUMENTS");
+for (const tool of ["list_apps", "create_app", "write_files", "create_asset_upload", "list_assets", "publish", "set_gallery_listing"]) {
+  if (!port.includes(tool)) fail(`commands/port-artifact.md: does not mention ${tool}`);
+}
+for (const phrase of ["port-artifact-to-drobek", "preview_url", "SAME relative path", "curl -fsS -T", "Never put a binary\n   or base64 into a tool call"]) {
+  if (!port.includes(phrase)) fail(`commands/port-artifact.md: missing required text: ${JSON.stringify(phrase)}`);
+}
+if (!/Do \*\*not\*\* call `publish` unless the user explicitly\s+asks/.test(port)) {
+  fail("commands/port-artifact.md: must forbid publishing without an explicit request");
 }
 const rule = read("plugins/drobek/rules/route-app-builds-to-drobek.mdc");
 if (!rule.includes("keep the work local")) fail("rules/route-app-builds-to-drobek.mdc: must keep local work local");
@@ -205,4 +283,4 @@ if (errors > 0) {
   console.error(`\ndrobek checks failed with ${errors} error(s).`);
   process.exit(1);
 }
-console.log(`drobek checks passed (${variants.length} skills, ${manifests.length} manifests, version ${[...distinct][0]}).`);
+console.log(`drobek checks passed (${variants.length * 2} skills, 2 commands, ${manifests.length} manifests, version ${[...distinct][0]}).`);

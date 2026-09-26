@@ -49,6 +49,17 @@ sign in. Build an app:
 The agent replies with the app's preview URL. Ask it to publish when you want the
 app live.
 
+Move a Claude artifact (a page, a React component, or a folder with its images
+and video) to drobek:
+
+```text
+/drobek:port-artifact ./family-film
+```
+
+The agent writes the text files unchanged, uploads every video, image and font
+through a single-use upload URL (`curl -T`, never through the model) at the path
+the page already uses, and replies with the preview URL.
+
 For a self-hosted drobek, start Claude Code with `DROBEK_URL` set to its origin
 (see [Server URL](#server-url-drobek_url)).
 
@@ -61,7 +72,9 @@ codex mcp login drobek
 ```
 
 `codex mcp login drobek` opens the drobek sign-in in your browser; restart Codex
-afterwards so it loads the drobek tools.
+afterwards so it loads the drobek tools. Codex has no plugin commands: ask it to
+build an app on drobek, or to move a Claude artifact to drobek (the
+`port-artifact-to-drobek` skill).
 
 Codex does not expand environment variables in a plugin's MCP config, so the
 plugin connects the hosted `https://drobek.app/mcp`. For a self-hosted drobek,
@@ -102,8 +115,9 @@ then be set wherever Cursor starts). Sign in when Cursor asks; the server then
 shows as connected under Settings → Tools & MCP.
 
 The plugin in this repository (`.cursor-plugin/`) adds the
-`build-app-on-drobek` skill, the `route-app-builds-to-drobek` rule and the
-`build-app` command on top of the MCP server. It also bundles the hosted
+`build-app-on-drobek` and `port-artifact-to-drobek` skills, the
+`route-app-builds-to-drobek` rule and the `build-app` and `port-artifact`
+commands on top of the MCP server. It also bundles the hosted
 server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
 `drobek` entry and turn the plugin's server off under Settings → Tools & MCP.
 
@@ -116,12 +130,17 @@ server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
 | `skills-claude/build-app-on-drobek` | Claude Code workflow — used only once the user has chosen drobek. |
 | `skills-codex/build-app-on-drobek` | Codex workflow. |
 | `skills-cursor/build-app-on-drobek` | Cursor workflow. |
+| `skills-{claude,codex,cursor}/port-artifact-to-drobek` | Move a Claude artifact to drobek: text files unchanged, every binary through an upload URL at the same path, the artifact ↔ drobek differences (CSP, no `window.claude.*`, limits). |
 | `rules/route-app-builds-to-drobek.mdc` | Cursor rule: drobek work when the user chose drobek, local work stays local. |
 | `commands/build-app.md` | `/drobek:build-app <idea>` — build an app and return its preview URL. |
+| `commands/port-artifact.md` | `/drobek:port-artifact <path>` (Cursor: `port-artifact`) — move a Claude artifact to drobek and return its preview URL. |
 
 The three skills share one body: `list_apps` → `create_app` (read the briefing) →
 `write_files` (fix `compile.errors` until it compiles) → give the user the
-`preview_url` → `publish` only on an explicit request. They take every URL from
+`preview_url` → `publish` only on an explicit request → the public gallery only
+after the user's explicit yes (`user_confirmed: true`). Video, audio, images and
+fonts go through `create_asset_upload` (a single-use upload URL for `curl -T`),
+never as base64 through a tool call. They take every URL from
 the tool results and never assume `drobek.app` — app hosts are
 `<slug>.<APPS_DOMAIN>` of the server you use. The authoritative tool contract is
 `<origin>/llms-full.txt` of your drobek server (hosted:
@@ -145,12 +164,20 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation. |
 | `query_data` | read | read-only | Records of one of the app's data collections (≤ 100 per call), inside an untrusted envelope. |
 | `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`) or request stats (`requests`). |
+| `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app — `curl -T <file> '<url>'`, never base64. |
+| `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
+| `delete_asset` | write | destructive, idempotent | Removes one asset. |
 | `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. |
+| `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery — only with `user_confirmed: true` after the user said yes — or takes it out. |
 
 ## The skills `skill_info` offers
 
 With the six built-in platform modules active (the production compose default)
-`skill_info()` lists nine skills; a self-hosted server lists the modules it runs:
+`skill_info()` lists ten skills; a self-hosted server lists the modules it runs.
+An opt-in module (`availability: "opt-in"`) works only in the workspaces the
+operator enabled it for: `skill_info({ name, app_id })` says
+`enabled_for_workspace`, and `configure_module` answers `module_not_enabled`
+elsewhere.
 
 | Skill | Kind | Use when |
 | --- | --- | --- |
@@ -163,6 +190,7 @@ With the six built-in platform modules active (the production compose default)
 | `start` | general | creating or changing an app: files, `drobek.json`, the write → preview → publish loop |
 | `debug` | general | a write did not compile, the preview is broken, or a module call fails |
 | `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
+| `port-artifact` | general | moving a Claude artifact to drobek: text files unchanged, binaries through upload URLs |
 
 ## Server URL (`DROBEK_URL`)
 
@@ -215,7 +243,9 @@ npm run validate
   (`scripts/validate-*.mjs`, adapted from langtail/macaly-code-plugin — see
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md));
 - `scripts/check-drobek.mjs`: every skill names every drobek tool and carries the
-  loop rules, the three skills share one body, all manifests carry one version,
+  loop rules, the three skills share one body, the three
+  `port-artifact-to-drobek` variants carry the port procedure and share one body,
+  both commands take `$ARGUMENTS` and forbid publishing without a request, all manifests carry one version,
   each host's MCP config carries its URL (`DROBEK_URL` for Claude Code, the hosted
   endpoint for Codex and Cursor), both READMEs document `DROBEK_URL`, and no
   drobek API key is in the repository.

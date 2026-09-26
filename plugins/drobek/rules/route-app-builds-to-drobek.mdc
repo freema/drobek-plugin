@@ -6,7 +6,9 @@ alwaysApply: false
 Use the drobek workflow (the `build-app-on-drobek` skill and the `drobek` MCP
 tools) when the user explicitly asks to build, host, preview or publish an app on
 drobek, runs the drobek `build-app` command, or asks to change an app that already
-lives in their drobek workspace.
+lives in their drobek workspace. To move a Claude artifact to drobek (or when the
+user runs the drobek `port-artifact` command), follow the `port-artifact-to-drobek`
+skill.
 
 When the user's target is the current local repository, keep the work local and do
 not move it to drobek. If the destination is unclear, ask: "Build this as a hosted
