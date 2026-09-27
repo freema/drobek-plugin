@@ -52,6 +52,7 @@ const TOOLS = [
   "delete_asset",
   "publish",
   "set_gallery_listing",
+  "duplicate_app",
   "list_domains",
   "add_domain",
   "verify_domain",
@@ -109,6 +110,7 @@ const REQUIRED_PHRASES = [
   "module_not_enabled",
   "skill_info({ name, app_id })",
   "`port-artifact-to-drobek`",
+  "`not_duplicable`",
 ];
 const PORT_TOOLS = ["create_app", "write_files", "create_asset_upload", "list_assets", "delete_asset", "get_logs", "publish", "set_gallery_listing"];
 const PORT_PHRASES = [

@@ -176,6 +176,7 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `remove_upstream` | write (workspace admins) | destructive, idempotent | Removes an upstream and its key — only with `user_confirmed: true`; apps calling it stop working at once. |
 | `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. `publish_blocked` (the operator turned publishing off for the workspace) and `publish_not_approved` (the server needs the operator's approval) name the operator in `contact`. |
 | `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery — only with `user_confirmed: true` after the user said yes — or takes it out. |
+| `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
 | `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it — only with `user_confirmed: true`. |
 | `set_workspace_publishing` | publish (super-admins only) | not destructive, idempotent | Sets a workspace's publishing to `default` (the server mode decides), `allowed` or `blocked` — only with `user_confirmed: true`. |
 
@@ -269,12 +270,15 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.6 && git push origin v0.2.6
+git tag v0.2.8 && git push origin v0.2.8
 ```
 
-The tag runs `.github/workflows/release.yml`, which tests the package and
-publishes it with npm Trusted Publishing (OIDC, provenance attached) — no npm
-token lives in the repository. The npm package trusts that workflow under
+The tag runs `.github/workflows/release.yml`, which tests the package,
+refuses a tag that differs from the `package.json` version, publishes it with
+npm Trusted Publishing (OIDC, provenance attached) — no npm token lives in the
+repository — and then creates the GitHub Release for the tag. A tag is not a
+release: check that the release shows as Latest under Releases, and create it
+by hand if the job did not run. The npm package trusts that workflow under
 *Settings → Trusted Publisher* on npmjs.com.
 
 ## License
