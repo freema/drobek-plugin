@@ -15,7 +15,7 @@ the app's `preview_url`. Every write is an immutable version.
 The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
 `create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
-`set_gallery_listing`, `list_domains`, `add_domain`, `verify_domain`,
+`set_gallery_listing`, `duplicate_app`, `list_domains`, `add_domain`, `verify_domain`,
 `set_primary_domain`, `remove_domain`, `list_upstreams`, `register_upstream`,
 `remove_upstream` and — for a super-admin of the server
 only — `set_workspace_publishing`. Your client may show them with a prefix (for example
@@ -112,7 +112,16 @@ to publish). Do not work around a missing connection with local files.
    the answer is `user_confirmation_required` and nothing changes. Never list
    an app on your own initiative. `set_gallery_listing({ app_id, listed:
    false })` takes it out at once. `not_published`, `gallery_hidden` and
-   `gallery_disabled` mean: tell the user, do not retry.
+   `gallery_disabled` mean: tell the user, do not retry. When the user also
+   wants others to copy the app, pass `allow_duplicate: true` in the same
+   call — the same yes covers it.
+8. **Duplicate only when the user asks.** `duplicate_app({ from, workspace?,
+   name? })` (scope `write`) copies a gallery app whose owner allows
+   duplicates (`from`: its slug or address) into a new, unpublished app with
+   the source's published files as version 1. Module settings that need a
+   confirmation wait in `modules.pending` — relay each `confirm_url` to the
+   user. Secrets, data, users, uploads and domains are never copied.
+   `not_duplicable` and `rate_limited` mean: tell the user, do not retry.
 
 ## How a drobek app is built
 
