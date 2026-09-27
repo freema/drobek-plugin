@@ -14,9 +14,9 @@ the app's `preview_url`. Every write is an immutable version.
 
 The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
-`create_asset_upload`, `list_assets`, `delete_asset`, `publish` and
-`set_gallery_listing`. Your client
-may show them with a prefix (for example
+`create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
+`set_gallery_listing` and — for a super-admin of the server only —
+`set_publish_approval`. Your client may show them with a prefix (for example
 `mcp__plugin_drobek_drobek__create_app`) — it is the same tool.
 
 ## When to use this
@@ -90,7 +90,14 @@ to publish). Do not work around a missing connection with local files.
    publish on your own initiative — the preview URL is for showing work in
    progress. `publish` needs the `publish` scope; if the tool is not in your
    tool list, tell the user to reconnect the drobek server with `publish`
-   approved, or to publish from the drobek dashboard.
+   approved, or to publish from the drobek dashboard. A server can require
+   the operator's approval before a workspace publishes: `list_apps` and
+   `get_app` say `can_publish` (and `publish_contact` when it is false).
+   `publish_not_approved` means the operator was already e-mailed a request —
+   tell the user who approves (the `contact` in the error), do not retry;
+   previews and versions keep working meanwhile. A super-admin approves a
+   workspace with `set_publish_approval({ workspace, approved: true,
+   user_confirmed: true })` — only after they say yes to it.
 7. **Gallery only after an explicit yes.** A server can list published apps
    in a public gallery (name, a short description, the production URL).
    Offer it at most once: show the user the exact description (plain text,

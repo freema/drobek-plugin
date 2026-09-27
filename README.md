@@ -167,8 +167,9 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app — `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
 | `delete_asset` | write | destructive, idempotent | Removes one asset. |
-| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. |
+| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. `publish_not_approved` names the operator who approves the workspace. |
 | `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery — only with `user_confirmed: true` after the user said yes — or takes it out. |
+| `set_publish_approval` | publish (super-admins only) | not destructive, idempotent | Approves a workspace for publishing (or revokes it) on a server that runs `PUBLISH_APPROVAL=approval` — only with `user_confirmed: true`. |
 
 ## The skills `skill_info` offers
 
