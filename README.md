@@ -273,9 +273,12 @@ npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and th
 git tag v0.2.8 && git push origin v0.2.8
 ```
 
-The tag runs `.github/workflows/release.yml`, which tests the package and
-publishes it with npm Trusted Publishing (OIDC, provenance attached) — no npm
-token lives in the repository. The npm package trusts that workflow under
+The tag runs `.github/workflows/release.yml`, which tests the package,
+refuses a tag that differs from the `package.json` version, publishes it with
+npm Trusted Publishing (OIDC, provenance attached) — no npm token lives in the
+repository — and then creates the GitHub Release for the tag. A tag is not a
+release: check that the release shows as Latest under Releases, and create it
+by hand if the job did not run. The npm package trusts that workflow under
 *Settings → Trusted Publisher* on npmjs.com.
 
 ## License
