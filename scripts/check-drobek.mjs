@@ -52,6 +52,11 @@ const TOOLS = [
   "delete_asset",
   "publish",
   "set_gallery_listing",
+  "list_domains",
+  "add_domain",
+  "verify_domain",
+  "set_primary_domain",
+  "remove_domain",
   "set_workspace_publishing",
 ];
 const DEFAULT_ORIGIN = "https://drobek.app";

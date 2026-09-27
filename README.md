@@ -167,8 +167,13 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app — `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
 | `delete_asset` | write | destructive, idempotent | Removes one asset. |
+| `list_domains` | read | read-only | The app's custom domains: status (pending / verified), primary, the two DNS records to create and the last check. |
+| `add_domain` | write | not destructive, idempotent | Attaches a domain the user owns and returns the CNAME and TXT records to create. |
+| `verify_domain` | write | not destructive, idempotent, open world | Looks both records up; `domain_not_verified` names the missing or wrong one (DNS can take up to 48 hours). |
+| `remove_domain` | write | destructive, idempotent, open world | Detaches a domain — a verified one only with `user_confirmed: true`. |
 | `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. `publish_blocked` (the operator turned publishing off for the workspace) and `publish_not_approved` (the server needs the operator's approval) name the operator in `contact`. |
 | `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery — only with `user_confirmed: true` after the user said yes — or takes it out. |
+| `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it — only with `user_confirmed: true`. |
 | `set_workspace_publishing` | publish (super-admins only) | not destructive, idempotent | Sets a workspace's publishing to `default` (the server mode decides), `allowed` or `blocked` — only with `user_confirmed: true`. |
 
 ## The skills `skill_info` offers
@@ -261,7 +266,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.4 && git push origin v0.2.4
+git tag v0.2.5 && git push origin v0.2.5
 ```
 
 The tag runs `.github/workflows/release.yml`, which tests the package and

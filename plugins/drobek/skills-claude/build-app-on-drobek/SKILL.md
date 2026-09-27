@@ -15,8 +15,9 @@ the app's `preview_url`. Every write is an immutable version.
 The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
 `create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
-`set_gallery_listing` and — for a super-admin of the server only —
-`set_workspace_publishing`. Your client may show them with a prefix (for example
+`set_gallery_listing`, `list_domains`, `add_domain`, `verify_domain`,
+`set_primary_domain`, `remove_domain` and — for a super-admin of the server
+only — `set_workspace_publishing`. Your client may show them with a prefix (for example
 `mcp__plugin_drobek_drobek__create_app`) — it is the same tool.
 
 ## When to use this
@@ -193,6 +194,33 @@ app file at that path wins), `upload_token_invalid` (the URL was used or
 expired — ask for a new one). To move a Claude artifact to drobek, follow the
 `port-artifact-to-drobek` skill.
 
+## Custom domains
+
+An app can also answer on a domain the user owns (the dashboard's Domains
+tab does the same):
+
+1. `add_domain({ app_id, host })` (scope `write`) returns the domain, pending,
+   with the two DNS `records` the user creates at their DNS provider: CNAME
+   `<host>` → `<slug>.<APPS_DOMAIN>` (at an apex name: ALIAS / ANAME / CNAME
+   flattening to the same target) and TXT `_drobek.<host>` =
+   `drobek-verify=<token>`. Show the user both records exactly as returned.
+2. `verify_domain({ app_id, host })` once they created them. Verified → the
+   domain serves the published version. `domain_not_verified` says which
+   record is missing or wrong (`cname`, `txt`, `records`): tell the user —
+   DNS can take up to 48 hours, so verify again after a while, not in a loop.
+   `dns_unavailable`: a lookup failed, try again in a few minutes.
+3. `list_domains({ app_id })` shows every domain with its status, records and
+   last check.
+
+Changes to the public site need the user's explicit yes first:
+`set_primary_domain({ app_id, host, user_confirmed: true })` (scope
+`publish`; the production URL then redirects to that verified domain;
+`host: null` clears it) and `remove_domain({ app_id, host, user_confirmed:
+true })` of a verified domain (it stops serving at once; a pending one needs
+no confirmation). Refusals: `invalid_hostname`, `hostname_not_allowed`,
+`domain_already_added`, `domain_taken`, `limit_exceeded` (the server's
+per-app limit; 0 = custom domains are off for the workspace).
+
 ## Rules
 
 - **Single writer.** A write takes the app's lease for 3 minutes, renewed by
@@ -220,7 +248,7 @@ expired — ask for a new one). To move a Claude artifact to drobek, follow the
   workspace. `invalid_params` / `invalid_path` / `limit_exceeded`: fix the
   arguments as the message says. `module_not_enabled`: the opt-in module is
   off for this workspace — do not use it. `user_confirmation_required`: ask
-  the user before the gallery call.
+  the user before the gallery, primary-domain or domain-removal call.
 - **Stay in drobek.** For a drobek app, do not scaffold local files, run
   npm/vite, or start a local server — the app lives in the workspace.
 - **Your server's URLs.** drobek is self-hostable, so the server you are
