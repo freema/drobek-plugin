@@ -11,7 +11,13 @@ permissions:
   id-token: write
 
 jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml
+    permissions:
+      contents: read
+
   publish:
+    needs: validate
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -32,10 +38,5 @@ jobs:
         run: |
           v="$(node -p 'require("./package.json").version')"
           [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$v"; exit 1; }
-
-      - run: npm test
-
-      - name: drobek skill checks (versions in every manifest agree)
-        run: npm run check
 
       - run: npm publish --access public
