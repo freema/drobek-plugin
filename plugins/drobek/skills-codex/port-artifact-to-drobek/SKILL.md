@@ -94,7 +94,7 @@ A wrong upload: upload to the same path again (it replaces the asset) or
   server's): text files 512 KiB each, 5 MiB and 200 files per version; an
   asset up to 100 MiB, 1 GiB of assets per app, 60 upload URLs per app and
   hour. Asset types come from the bytes: MP4 (H.264/AAC), WebM, MP3, M4A,
-  Ogg, WAV, PNG, JPEG, GIF, WebP, SVG, WOFF, WOFF2 — no transcoding (convert
+  Ogg, WAV, PNG, JPEG, GIF, WebP, AVIF, ICO, SVG, WOFF, WOFF2 — no transcoding (convert
   a MOV/HEVC video first). A big `data:` URI inlined in the HTML: save it as
   a file and upload it.
 

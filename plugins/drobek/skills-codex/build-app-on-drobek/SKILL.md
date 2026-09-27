@@ -116,7 +116,7 @@ restart Codex. Do not work around a missing connection with local files.
   URLs); React and react-dom are already mapped. Pin exact versions.
 - Styling is plain CSS imported from TypeScript — no Tailwind or other CSS
   build step.
-- Paths are app-relative (`src/App.tsx`): no leading `/`, no `..`. Text files
+- Paths are app-relative (`src/App.tsx`; a leading `/` is dropped), no `..`. Text files
   only: .tsx .ts .jsx .js .mjs .css .json .html .txt .md .svg .webmanifest.
   Video, audio, images and fonts go through `create_asset_upload` (below).
 - The app's Content Security Policy allows scripts only from the app itself
@@ -176,7 +176,7 @@ For each video, audio file, image or font:
 `list_assets({ app_id })` shows the assets and the quota; `delete_asset({
 app_id, path })` removes one; uploading to the same path replaces it.
 Refusals: `asset_too_large`, `asset_type_not_allowed` (the bytes decide the
-type: MP4 H.264/AAC, WebM, MP3, M4A, Ogg, WAV, PNG, JPEG, GIF, WebP, SVG,
+type: MP4 H.264/AAC, WebM, MP3, M4A, Ogg, WAV, PNG, JPEG, GIF, WebP, AVIF, ICO, SVG,
 WOFF, WOFF2 — no transcoding), `asset_quota_exceeded`, `asset_path_taken` (an
 app file at that path wins), `upload_token_invalid` (the URL was used or
 expired — ask for a new one). To move a Claude artifact to drobek, follow the
