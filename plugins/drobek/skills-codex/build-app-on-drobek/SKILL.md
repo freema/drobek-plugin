@@ -16,7 +16,8 @@ The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
 `create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
 `set_gallery_listing`, `list_domains`, `add_domain`, `verify_domain`,
-`set_primary_domain`, `remove_domain` and — for a super-admin of the server
+`set_primary_domain`, `remove_domain`, `list_upstreams`, `register_upstream`,
+`remove_upstream` and — for a super-admin of the server
 only — `set_workspace_publishing`. Your client may show them with a prefix (for example
 `mcp__plugin_drobek_drobek__create_app`) — it is the same tool.
 
@@ -219,6 +220,21 @@ true })` of a verified domain (it stops serving at once; a pending one needs
 no confirmation). Refusals: `invalid_hostname`, `hostname_not_allowed`,
 `domain_already_added`, `domain_taken`, `limit_exceeded` (the server's
 per-app limit; 0 = custom domains are off for the workspace).
+
+## External APIs (proxy upstreams)
+
+An app calls a third-party API through the `proxy` module, never with a key
+in browser code. A workspace admin registers the upstream once:
+`register_upstream({ workspace, name, base_url, allowed_methods,
+allowed_path_prefixes, auth_type })`. `auth_type: "none"` registers at once.
+`bearer` / `header` (with `auth_header_name`) answer `registered: false` and
+`secret_url` — give the user that link to paste the key; never ask for a key
+in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
+{ rules: { call: "user" } } } })` (an unregistered name is refused with
+`invalid_params`, `upstream_not_registered`) and call it with
+`drobek.proxy.fetch`. `list_upstreams` shows what exists;
+`remove_upstream` needs `user_confirmed: true`. `skill_info('proxy')` has
+the details.
 
 ## Rules
 

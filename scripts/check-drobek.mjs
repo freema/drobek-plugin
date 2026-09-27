@@ -57,6 +57,9 @@ const TOOLS = [
   "verify_domain",
   "set_primary_domain",
   "remove_domain",
+  "list_upstreams",
+  "register_upstream",
+  "remove_upstream",
   "set_workspace_publishing",
 ];
 const DEFAULT_ORIGIN = "https://drobek.app";
