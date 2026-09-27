@@ -52,7 +52,7 @@ const TOOLS = [
   "delete_asset",
   "publish",
   "set_gallery_listing",
-  "set_publish_approval",
+  "set_workspace_publishing",
 ];
 const DEFAULT_ORIGIN = "https://drobek.app";
 const HOSTED_MCP_URL = `${DEFAULT_ORIGIN}/mcp`;
