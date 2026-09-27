@@ -18,6 +18,7 @@ const PLUGIN_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'plugins'
 export function resolveOrigin(argv, env) {
   const i = argv.findIndex((a) => a === '--url' || a.startsWith('--url='));
   const raw = i < 0 ? env.DROBEK_URL : argv[i].includes('=') ? argv[i].slice(6) : argv[i + 1];
+  if (i >= 0 && (!raw || raw.startsWith('--'))) throw new Error('--url needs an origin, e.g. https://drobek.example.com');
   if (!raw) return HOSTED;
   let u;
   try {
@@ -82,7 +83,7 @@ function main(argv, env) {
   }
   const origin = resolveOrigin(argv, env);
   const parts = { claude, codex, cursor };
-  if (cmd !== 'all' && !parts[cmd]) throw new Error(`unknown command: ${cmd} (claude, codex, cursor, path)`);
+  if (cmd !== 'all' && !Object.hasOwn(parts, cmd)) throw new Error(`unknown command: ${cmd} (claude, codex, cursor, path)`);
   const pick = cmd === 'all' ? Object.values(parts) : [parts[cmd]];
   process.stdout.write(`drobek at ${origin} — MCP endpoint ${origin}/mcp (you sign in with OAuth in the browser)\n\n${pick.map((f) => f(origin)).join('\n')}`);
   return 0;

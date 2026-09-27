@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { cursorLink, resolveOrigin } from '../bin/drobek-plugin.mjs';
 
@@ -26,4 +26,24 @@ test('the bin prints setup for one agent and the plugin path', () => {
   assert.doesNotMatch(out, /Claude Code/);
   const path = execFileSync(process.execPath, [BIN, 'path'], { encoding: 'utf8' }).trim();
   assert.match(path, /plugins\/drobek$/);
+});
+
+
+test('an explicit empty origin never falls back to the hosted service', () => {
+  for (const args of [['--url'], ['--url='], ['--url', '--other']]) {
+    assert.throws(() => resolveOrigin(args, { DROBEK_URL: 'https://self.example.com' }), /--url needs an origin/);
+    const result = spawnSync(process.execPath, [BIN, 'cursor', ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /--url needs an origin/);
+  }
+});
+
+test('inherited Object property names are rejected as unknown commands', () => {
+  for (const command of ['constructor', 'toString', '__proto__']) {
+    const result = spawnSync(process.execPath, [BIN, command], { encoding: 'utf8' });
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /unknown command/);
+    assert.equal(result.stdout, '');
+  }
 });
