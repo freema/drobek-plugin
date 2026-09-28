@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Cursor plugin schema validator (marketplace.json + every plugin.json against
- * schemas/*.schema.json).
+ * Validate Cursor's marketplace.json and each plugin.json against the JSON
+ * schemas in schemas/.
  *
  * Adapted from langtail/macaly-code-plugin (MIT License, Copyright (c) 2026
- * Macaly) — see THIRD_PARTY_NOTICES.md.
+ * Macaly). See THIRD_PARTY_NOTICES.md.
  */
 
 import { readFileSync, existsSync } from "fs";
@@ -39,7 +39,7 @@ function fail(message) {
   errors++;
 }
 
-// 1. Validate marketplace.json
+// Marketplace schema
 const marketplacePath = resolve(root, ".cursor-plugin/marketplace.json");
 
 if (!existsSync(marketplacePath)) {
@@ -56,12 +56,11 @@ if (!validateMarketplace(marketplace)) {
   }
 }
 
-// 2. Validate each plugin
+// Plugin schemas
 for (const entry of marketplace.plugins ?? []) {
   const pluginDir = resolve(root, entry.source);
   const pluginJsonPath = resolve(pluginDir, ".cursor-plugin/plugin.json");
 
-  // Check source directory exists
   if (!existsSync(pluginDir)) {
     fail(
       `Plugin "${entry.name}": source directory "${entry.source}" does not exist`
@@ -69,7 +68,6 @@ for (const entry of marketplace.plugins ?? []) {
     continue;
   }
 
-  // Check plugin.json exists
   if (!existsSync(pluginJsonPath)) {
     fail(
       `Plugin "${entry.name}": missing .cursor-plugin/plugin.json in "${entry.source}"`
@@ -92,7 +90,6 @@ for (const entry of marketplace.plugins ?? []) {
     }
   }
 
-  // Check that marketplace name matches plugin name
   if (pluginJson.name && pluginJson.name !== entry.name) {
     fail(
       `Plugin "${entry.name}": marketplace name does not match plugin.json name "${pluginJson.name}"`
@@ -100,7 +97,6 @@ for (const entry of marketplace.plugins ?? []) {
   }
 }
 
-// 3. Report results
 if (errors > 0) {
   console.error(`\nValidation failed with ${errors} error(s).`);
   process.exit(1);

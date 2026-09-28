@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Runs `claude plugin validate --strict` over the skill and command FILES.
+ * Run `claude plugin validate --strict` on skill and command files.
  *
- * Validating plugins/drobek checks its plugin.json, but the Claude CLI parses
- * skill and command frontmatter only in a directory laid out as `skills/` +
- * `commands/`. The plugin keeps one skill folder per host (skills-claude,
- * skills-codex, skills-cursor), so each variant is staged into a temporary
- * directory with that layout and validated there.
+ * Validating plugins/drobek checks only plugin.json. To check frontmatter,
+ * the Claude CLI needs skills/ and commands/ directories. Copy each host's
+ * skill folder (skills-claude, skills-codex, skills-cursor) and the commands
+ * into that layout in a temporary directory, then validate it.
  */
 
 import { spawnSync } from "node:child_process";

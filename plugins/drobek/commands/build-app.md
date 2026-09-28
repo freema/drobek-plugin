@@ -4,25 +4,25 @@ description: Build a new web app in your drobek workspace from a one-line idea a
 argument-hint: <what the app should do>
 ---
 
-Build a new web app in the user's **drobek** workspace for this request:
-**$ARGUMENTS**
+Build a new web app in the user's drobek workspace for this request:
+$ARGUMENTS
 
 The user chose drobek by running this command. If the request above is empty,
 ask what the app should do before creating anything. Follow the
 `build-app-on-drobek` skill. Work only through the `drobek` MCP server's tools
 (`list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
-`publish`) — do not write the app's files to the local
-filesystem, run npm or start a local server.
+`publish`). Do not write the app's files to the local filesystem, run npm or
+start a local server.
 
 1. `list_apps({})` to confirm the connection and see the user's workspaces. If
    the drobek tools are missing or answer 401, ask the user to connect and sign in
    to their drobek MCP server (in Claude Code: `/mcp`), then stop.
 2. `create_app({ name })` with a short, human-readable name derived from the
    request (template `react-ts` is the default; use `"html"` only for a single
-   static page). Read the returned **briefing** in full before writing code.
-3. Write a real, working first version with ONE `write_files({ app_id, files,
-   reasoning })` call: full file contents — usually `src/main.tsx` (the React
+   static page). Read the returned briefing in full before writing code.
+3. Write a working first version in one `write_files({ app_id, files,
+   reasoning })` call. Send full file contents, usually `src/main.tsx` (the React
    app), `src/styles.css` (plain CSS) and, if the page title should change,
    `index.html` (keep its `/main.css` and `/main.js` tags). Keep `drobek.json`
    unless you add a package; add packages there with pinned
@@ -33,11 +33,11 @@ filesystem, run npm or start a local server.
    browser.
 4. If `compile.ok` is false, fix each `compile.errors` entry (file, line, column,
    text) and call `write_files` again until it compiles.
-5. Reply with the `preview_url` exactly as the tool returned it (the user's
-   drobek server may be self-hosted — never build an app URL yourself or
-   assume `drobek.app`) and a two-line summary of what the app does.
+5. Reply with the `preview_url` exactly as the tool returned it and a two-line
+   summary of what the app does. The user's drobek server may be self-hosted,
+   so never build an app URL yourself or assume `drobek.app`.
    Do **not** call `publish` unless the user explicitly asks to go live.
 
-Never put API keys, tokens or passwords in app files — if the app needs one,
-tell the user to set it in the drobek dashboard. Keep the first version scoped
-to what was asked.
+Never put API keys, tokens or passwords in app files. If the app needs one,
+tell the user to set it in the drobek dashboard. Keep the first version within
+the scope of the request.

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// drobek-plugin — set up the drobek plugin for Claude Code, Codex or Cursor.
+// Print drobek plugin setup instructions for Claude Code, Codex or Cursor.
 //
 //   npx drobek-plugin                 setup steps for every agent (hosted drobek.app)
 //   npx drobek-plugin claude|codex|cursor [--url https://drobek.example.com]
 //   npx drobek-plugin path            absolute path of the bundled plugin directory
 //
-// It only prints: it never edits your agent's config and never asks for a key.
+// Does not edit agent config or request API keys.
 import { existsSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ const HOSTED = 'https://drobek.app';
 const REPO = 'freema/drobek-plugin';
 const PLUGIN_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'plugins', 'drobek');
 
-/** The origin from --url, then DROBEK_URL, then the hosted drobek. Scheme + host only. */
+/** Resolve the origin from --url, DROBEK_URL or the hosted default, in that order. */
 export function resolveOrigin(argv, env) {
   const i = argv.findIndex((a) => a === '--url' || a.startsWith('--url='));
   const raw = i < 0 ? env.DROBEK_URL : argv[i].includes('=') ? argv[i].slice(6) : argv[i + 1];
@@ -30,7 +30,7 @@ export function resolveOrigin(argv, env) {
   return u.origin;
 }
 
-/** Cursor's one-click MCP install link for this origin. */
+/** Build a Cursor MCP install link for this origin. */
 export function cursorLink(origin) {
   const config = Buffer.from(JSON.stringify({ url: `${origin}/mcp` })).toString('base64');
   return `cursor://anysphere.cursor-deeplink/mcp/install?name=drobek&config=${encodeURIComponent(config)}`;
@@ -89,7 +89,7 @@ function main(argv, env) {
   return 0;
 }
 
-// npx runs the bin through a symlink in node_modules/.bin — compare real paths.
+// Compare real paths because npx runs this file through a node_modules/.bin symlink.
 if (process.argv[1] && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])) {
   try {
     process.exitCode = main(process.argv.slice(2), process.env);

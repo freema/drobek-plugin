@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Cursor plugin structure validator: names, safe relative paths, referenced
- * files, and the frontmatter of rules, skills, agents and commands.
+ * Validate Cursor plugin names, relative paths, referenced files and the
+ * frontmatter of rules, skills, agents and commands.
  *
  * Adapted from langtail/macaly-code-plugin (MIT License, Copyright (c) 2026
- * Macaly) — see THIRD_PARTY_NOTICES.md. Changes: resolves the repo root from
- * the script location instead of the working directory, and checks skill
- * frontmatter in the directories the manifest's `skills` field points to (not
- * only `skills/`).
+ * Macaly). See THIRD_PARTY_NOTICES.md.
+ *
+ * Resolve the repository root from this script's location. Check skill
+ * frontmatter in the directories named by the manifest's `skills` field.
  */
 
 import { promises as fs } from "node:fs";
