@@ -14,6 +14,6 @@ When the user's target is the current local repository, keep the work local and 
 not move it to drobek. If the destination is unclear, ask: "Build this as a hosted
 app in your drobek workspace, or work in the current directory?"
 
-In a drobek build, never write the app's files to the local filesystem, never put a
-secret in an app file (the user sets secrets in the drobek dashboard), and call
-`publish` only when the user explicitly asks to go live.
+Build drobek apps in the drobek workspace without writing their files locally.
+Keep secrets out of app files; the user sets them in the drobek dashboard.
+Call `publish` only when the user explicitly asks to go live.

@@ -1,19 +1,36 @@
 # drobek plugins for coding agents
 
-[drobek](https://github.com/freema/drobek) is an open-source (AGPL),
-self-hostable cloud workspace for web apps built by agents — use the hosted
-instance at [drobek.app](https://drobek.app) or run your own. With the
-**drobek** plugin, your agent (Claude Code, Codex or Cursor) works directly in
-your drobek workspace: it creates an app, writes its files, gets
-the server-side compile result back on every write and hands you a live preview
-URL. Every change is an immutable version, and a version goes live on its
-production URL only when you ask for it.
+[drobek](https://github.com/freema/drobek) is an open-source (AGPL) cloud
+workspace for web apps built by agents. Use the hosted instance at
+[drobek.app](https://drobek.app) or run your own server.
 
-The plugin connects the MCP server of your drobek server, `<origin>/mcp` (OAuth
-2.1 — you sign in to that drobek in the browser and approve the scopes), and
-teaches the agent the build loop. The origin defaults to the hosted
-`https://drobek.app`; to use a self-hosted drobek, see
+The drobek plugin lets Claude Code, Codex or Cursor build apps directly in your
+drobek workspace. The agent writes the files, checks the server's compile result
+after each write and gives you a live preview URL. Every change creates an
+immutable version. The agent publishes a version to its production URL only
+when you ask.
+
+The plugin connects to your drobek server at `<origin>/mcp` and provides the
+agent's build workflow. It uses OAuth 2.1: you sign in through your browser and
+approve the requested scopes. The default origin is `https://drobek.app`;
+to connect to your own server, see
 [Server URL](#server-url-drobek_url).
+
+## Why I built this
+
+At work, almost everyone has started vibecoding: landing pages, internal tools,
+small websites and reports for colleagues. I wanted us to have an answer to
+where those apps run, who can access them and where the API keys end up.
+
+I built drobek for that. It grew out of something we run internally, and I
+released it as open source so others can host it too. People bring the coding
+agent they already use; drobek compiles, versions and hosts the frontend.
+Backend features go through modules, and the app owner sets secrets in the
+dashboard.
+
+This plugin connects that workflow to Claude Code, Codex and Cursor. The agent
+can build an app, fix compile errors and return a preview in the same
+conversation. You decide when it goes live.
 
 ## Quick start with npx
 
@@ -23,8 +40,8 @@ npx drobek-plugin cursor --url https://drobek.example.com # one agent, a self-ho
 ```
 
 The npm package [`drobek-plugin`](https://www.npmjs.com/package/drobek-plugin)
-only prints: it never edits your agent's config and never asks for a key. It
-also carries the plugin itself, so Claude Code can load it without the
+prints setup instructions. It does not edit your agent's config or ask for a
+key. It also includes the plugin, so Claude Code can load it without the
 marketplace:
 
 ```sh
@@ -38,7 +55,7 @@ claude plugin marketplace add freema/drobek-plugin
 claude plugin install drobek@drobek
 ```
 
-Inside Claude Code the same works as `/plugin marketplace add freema/drobek-plugin`
+Inside Claude Code, use `/plugin marketplace add freema/drobek-plugin`
 and `/plugin install drobek@drobek`. Then run `/mcp`, select the drobek server and
 sign in. Build an app:
 
@@ -56,9 +73,9 @@ and video) to drobek:
 /drobek:port-artifact ./family-film
 ```
 
-The agent writes the text files unchanged, uploads every video, image and font
-through a single-use upload URL (`curl -T`, never through the model) at the path
-the page already uses, and replies with the preview URL.
+The agent copies the text files unchanged and uploads videos, images and fonts
+to the paths the page already uses. Binary files go through single-use upload
+URLs (`curl -T`), never through the model. The agent then returns the preview URL.
 
 For a self-hosted drobek, start Claude Code with `DROBEK_URL` set to its origin
 (see [Server URL](#server-url-drobek_url)).
@@ -78,7 +95,7 @@ build an app on drobek, or to move a Claude artifact to drobek (the
 
 Codex does not expand environment variables in a plugin's MCP config, so the
 plugin connects the hosted `https://drobek.app/mcp`. For a self-hosted drobek,
-add your endpoint under the same name before the login — a `drobek` server in
+add your endpoint under the same name before signing in. A `drobek` server in
 your `~/.codex/config.toml` takes the place of the plugin's:
 
 ```sh
@@ -88,7 +105,7 @@ codex mcp login drobek
 
 ## Cursor
 
-**One-click MCP install** (the hosted drobek)
+Install the hosted drobek MCP server with this link:
 
 [Add drobek to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=drobek&config=eyJ1cmwiOiJodHRwczovL2Ryb2Jlay5hcHAvbWNwIn0=)
 
@@ -96,7 +113,7 @@ codex mcp login drobek
 cursor://anysphere.cursor-deeplink/mcp/install?name=drobek&config=eyJ1cmwiOiJodHRwczovL2Ryb2Jlay5hcHAvbWNwIn0=
 ```
 
-**Or add the server by hand** in `~/.cursor/mcp.json`:
+You can also add the server manually in `~/.cursor/mcp.json`:
 
 ```json
 {
@@ -112,14 +129,14 @@ For a self-hosted drobek, put your origin in `url` instead
 (`https://drobek.example.com/mcp`), or read it from the environment with
 Cursor's interpolation: `"url": "${env:DROBEK_URL}/mcp"` (`DROBEK_URL` must
 then be set wherever Cursor starts). Sign in when Cursor asks; the server then
-shows as connected under Settings → Tools & MCP.
+shows as connected under Settings > Tools & MCP.
 
 The plugin in this repository (`.cursor-plugin/`) adds the
 `build-app-on-drobek` and `port-artifact-to-drobek` skills, the
 `route-app-builds-to-drobek` rule and the `build-app` and `port-artifact`
 commands on top of the MCP server. It also bundles the hosted
 server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
-`drobek` entry and turn the plugin's server off under Settings → Tools & MCP.
+`drobek` entry and turn the plugin's server off under Settings > Tools & MCP.
 
 ## What the plugin ships
 
@@ -127,22 +144,24 @@ server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
 | --- | --- |
 | `plugins/drobek/.mcp.json` | Claude Code: the `drobek` MCP server at `${DROBEK_URL:-https://drobek.app}/mcp` (OAuth 2.1). |
 | `plugins/drobek/.mcp.hosted.json` | Codex and Cursor: the `drobek` MCP server at `https://drobek.app/mcp` (neither expands an env var with a default in a plugin's MCP config). |
-| `skills-claude/build-app-on-drobek` | Claude Code workflow — used only once the user has chosen drobek. |
+| `skills-claude/build-app-on-drobek` | Claude Code workflow, used only after the user chooses drobek. |
 | `skills-codex/build-app-on-drobek` | Codex workflow. |
 | `skills-cursor/build-app-on-drobek` | Cursor workflow. |
-| `skills-{claude,codex,cursor}/port-artifact-to-drobek` | Move a Claude artifact to drobek: text files unchanged, every binary through an upload URL at the same path, the artifact ↔ drobek differences (CSP, no `window.claude.*`, limits). |
-| `rules/route-app-builds-to-drobek.mdc` | Cursor rule: drobek work when the user chose drobek, local work stays local. |
-| `commands/build-app.md` | `/drobek:build-app <idea>` — build an app and return its preview URL. |
-| `commands/port-artifact.md` | `/drobek:port-artifact <path>` (Cursor: `port-artifact`) — move a Claude artifact to drobek and return its preview URL. |
+| `skills-{claude,codex,cursor}/port-artifact-to-drobek` | Move a Claude artifact to drobek, preserving text files and uploading binaries at the same paths. Covers differences in CSP, runtime APIs (no `window.claude.*`) and limits. |
+| `rules/route-app-builds-to-drobek.mdc` | Cursor rule: use drobek when the user chooses it; keep local work local. |
+| `commands/build-app.md` | `/drobek:build-app <idea>`: build an app and return its preview URL. |
+| `commands/port-artifact.md` | `/drobek:port-artifact <path>` (Cursor: `port-artifact`): move a Claude artifact to drobek and return its preview URL. |
 
-The three skills share one body: `list_apps` → `create_app` (read the briefing) →
-`write_files` (fix `compile.errors` until it compiles) → give the user the
-`preview_url` → `publish` only on an explicit request → the public gallery only
-after the user's explicit yes (`user_confirmed: true`). Video, audio, images and
-fonts go through `create_asset_upload` (a single-use upload URL for `curl -T`),
-never as base64 through a tool call. They take every URL from
-the tool results and never assume `drobek.app` — app hosts are
-`<slug>.<APPS_DOMAIN>` of the server you use. The authoritative tool contract is
+The three build skills share the same workflow. The agent calls `list_apps`,
+creates the app with `create_app` and reads its briefing. It then calls
+`write_files`, fixes any `compile.errors` and returns the `preview_url`.
+It calls `publish` only on an explicit request and lists the app in the public
+gallery only after the user agrees (`user_confirmed: true`).
+
+Video, audio, images and fonts go through `create_asset_upload`, which returns
+a single-use URL for `curl -T`. They must never be sent as base64 in a tool call.
+The agent uses URLs from tool results; it never assumes `drobek.app` because app
+hosts are `<slug>.<APPS_DOMAIN>` on the connected server. The tool contract is
 `<origin>/llms-full.txt` of your drobek server (hosted:
 [drobek.app/llms-full.txt](https://drobek.app/llms-full.txt)).
 
@@ -158,27 +177,27 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
 | `get_app` | read | read-only | One app: briefing, files, last 20 versions, module configs (secrets as `hasSecret` only), the write lock. |
 | `read_file` | read | read-only | One file of a version, inside an untrusted envelope. |
-| `write_files` | write | destructive | 1–20 file changes → one new version → one server-side compile (the result comes back). |
+| `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. |
 | `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
 | `skill_info` | read | read-only | The server's skills: the list, or one skill's Markdown with SDK types, config schema and limits. |
 | `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation. |
 | `query_data` | read | read-only | Records of one of the app's data collections (≤ 100 per call), inside an untrusted envelope. |
 | `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`) or request stats (`requests`). |
-| `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app — `curl -T <file> '<url>'`, never base64. |
+| `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app. Upload with `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
 | `delete_asset` | write | destructive, idempotent | Removes one asset. |
 | `list_domains` | read | read-only | The app's custom domains: status (pending / verified), primary, the two DNS records to create and the last check. |
 | `add_domain` | write | not destructive, idempotent | Attaches a domain the user owns and returns the CNAME and TXT records to create. |
 | `verify_domain` | write | not destructive, idempotent, open world | Looks both records up; `domain_not_verified` names the missing or wrong one (DNS can take up to 48 hours). |
-| `remove_domain` | write | destructive, idempotent, open world | Detaches a domain — a verified one only with `user_confirmed: true`. |
+| `remove_domain` | write | destructive, idempotent, open world | Detaches a domain. A verified domain requires `user_confirmed: true`. |
 | `list_upstreams` | read (workspace admins) | read-only | The workspace's proxy upstreams: base URL, allowed methods and path prefixes, auth type, whether a key is stored and the apps allowed to call each. |
-| `register_upstream` | write (workspace admins) | not destructive, idempotent | Registers an external API for the proxy module. `auth_type: "none"` registers at once; `bearer` / `header` return `secret_url`, the dashboard form filled in, where the user pastes the key — a key never passes through MCP. |
-| `remove_upstream` | write (workspace admins) | destructive, idempotent | Removes an upstream and its key — only with `user_confirmed: true`; apps calling it stop working at once. |
-| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL — only when the user asks. `publish_blocked` (the operator turned publishing off for the workspace) and `publish_not_approved` (the server needs the operator's approval) name the operator in `contact`. |
-| `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery — only with `user_confirmed: true` after the user said yes — or takes it out. |
+| `register_upstream` | write (workspace admins) | not destructive, idempotent | Registers an external API for the proxy module. `auth_type: "none"` registers immediately; `bearer` / `header` return `secret_url`, a prefilled dashboard form where the user enters the key. Keys never pass through MCP. |
+| `remove_upstream` | write (workspace admins) | destructive, idempotent | Removes an upstream and its key with `user_confirmed: true`. Apps calling it stop working immediately. |
+| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL when the user asks. `publish_blocked` means the operator disabled publishing for the workspace; `publish_not_approved` means operator approval is required. Both errors name the operator in `contact`. |
+| `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery with `user_confirmed: true` after the user agrees, or removes it from the gallery. |
 | `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
-| `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it — only with `user_confirmed: true`. |
-| `set_workspace_publishing` | publish (super-admins only) | not destructive, idempotent | Sets a workspace's publishing to `default` (the server mode decides), `allowed` or `blocked` — only with `user_confirmed: true`. |
+| `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it. Requires `user_confirmed: true`. |
+| `set_workspace_publishing` | publish (super-admins only) | not destructive, idempotent | Sets a workspace's publishing to `default` (the server mode decides), `allowed` or `blocked`. Requires `user_confirmed: true`. |
 
 ## The skills `skill_info` offers
 
@@ -197,7 +216,7 @@ elsewhere.
 | `email` | module | the app must tell its owners about something by e-mail |
 | `files` | module | people upload files the app keeps (photos, PDFs, CSVs) |
 | `proxy` | module | the app calls an external API that needs a secret key |
-| `start` | general | creating or changing an app: files, `drobek.json`, the write → preview → publish loop |
+| `start` | general | creating or changing an app: files, `drobek.json`, writing, previewing and publishing |
 | `debug` | general | a write did not compile, the preview is broken, or a module call fails |
 | `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
 | `port-artifact` | general | moving a Claude artifact to drobek: text files unchanged, binaries through upload URLs |
@@ -207,12 +226,11 @@ elsewhere.
 drobek is AGPL and self-hostable ([freema/drobek](https://github.com/freema/drobek)).
 The plugin talks to one drobek server, set by its origin:
 
-- **Setting:** `DROBEK_URL` — the origin only: scheme + host (+ port), no
-  trailing slash, no `/mcp`. Example: `https://drobek.example.com`.
-- **Default:** `https://drobek.app` (the hosted drobek).
-- **MCP endpoint:** `$DROBEK_URL/mcp`.
+Set `DROBEK_URL` to the origin only: scheme, host and optional port, with no
+trailing slash and no `/mcp`. For example: `https://drobek.example.com`.
+The default is `https://drobek.app`, and the MCP endpoint is `$DROBEK_URL/mcp`.
 
-**Claude Code** expands `${DROBEK_URL:-https://drobek.app}/mcp` in the plugin's
+Claude Code expands `${DROBEK_URL:-https://drobek.app}/mcp` in the plugin's
 `.mcp.json` when it starts. Set the variable in your shell:
 
 ```sh
@@ -227,7 +245,7 @@ or for every session in `~/.claude/settings.json`:
 ```
 
 Leave it unset for the hosted drobek. `claude mcp get plugin:drobek:drobek`
-shows the URL in use. **Codex** and **Cursor** do not expand a variable with a
+shows the URL in use. Codex and Cursor do not expand a variable with a
 default in a plugin's MCP config: add your endpoint as described under
 [Codex](#codex) and [Cursor](#cursor).
 
@@ -250,15 +268,15 @@ npm run validate
 - `claude plugin validate --strict` on the marketplace, the plugin, and every skill
   variant + command (`scripts/validate-claude-components.mjs`);
 - the Cursor schema and structure validators and the Codex validator
-  (`scripts/validate-*.mjs`, adapted from langtail/macaly-code-plugin — see
+  (`scripts/validate-*.mjs`, adapted from langtail/macaly-code-plugin; see
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md));
-- `scripts/check-drobek.mjs`: every skill names every drobek tool and carries the
-  loop rules, the three skills share one body, the three
-  `port-artifact-to-drobek` variants carry the port procedure and share one body,
-  both commands take `$ARGUMENTS` and forbid publishing without a request, all manifests carry one version,
-  each host's MCP config carries its URL (`DROBEK_URL` for Claude Code, the hosted
-  endpoint for Codex and Cursor), both READMEs document `DROBEK_URL`, and no
-  drobek API key is in the repository.
+- `scripts/check-drobek.mjs`, which checks the tool names and workflow rules,
+  matching bodies across the build skills and across the three
+  `port-artifact-to-drobek` variants, and `$ARGUMENTS` and publishing restrictions
+  in both commands. It also checks that manifest versions match, each host uses
+  the correct MCP URL (`DROBEK_URL` for Claude Code, the hosted endpoint for Codex
+  and Cursor), both READMEs document `DROBEK_URL`, and the repository contains no
+  drobek API keys.
 
 When the drobek MCP tool surface changes, update the skills and the tool list in
 `scripts/check-drobek.mjs` together with `TOOL_DOCS` in the drobek repository.
@@ -273,14 +291,14 @@ npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and th
 git tag v0.2.8 && git push origin v0.2.8
 ```
 
-The tag runs `.github/workflows/release.yml`, which tests the package,
-refuses a tag that differs from the `package.json` version, publishes it with
-npm Trusted Publishing (OIDC, provenance attached) — no npm token lives in the
-repository — and then creates the GitHub Release for the tag. A tag is not a
-release: check that the release shows as Latest under Releases, and create it
-by hand if the job did not run. The npm package trusts that workflow under
-*Settings → Trusted Publisher* on npmjs.com.
+The tag runs `.github/workflows/release.yml`. The workflow tests the package,
+checks that the tag matches the `package.json` version, publishes to npm with
+provenance through Trusted Publishing (OIDC), and creates a GitHub Release.
+It needs no npm token in the repository. Check that the release appears as
+Latest under Releases; if the job did not run, create the release manually.
+The npm package trusts this workflow through Settings > Trusted Publisher on
+npmjs.com.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

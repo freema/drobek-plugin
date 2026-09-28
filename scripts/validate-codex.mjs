@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Codex plugin validator — ported from codex-rs/core/src/plugins/marketplace.rs
+ * Validate Codex plugins using rules from codex-rs/core/src/plugins/marketplace.rs
  * and codex-rs/core/src/plugins/manifest.rs.
  *
  * Adapted from langtail/macaly-code-plugin (MIT License, Copyright (c) 2026
- * Macaly) — see THIRD_PARTY_NOTICES.md. Changes: runs with plain Node;
- * interface.displayName is required; the interface URLs are validated when
- * present (websiteURL is required) instead of requiring every
- * directory-listing URL.
+ * Macaly). See THIRD_PARTY_NOTICES.md.
+ *
+ * Runs with plain Node. Requires interface.displayName and websiteURL;
+ * validates the other interface URLs when present.
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from "fs";
@@ -47,19 +47,19 @@ function loadJSON(path, context) {
   }
 }
 
-// --- Path validation (mirrors resolve_manifest_path / resolve_plugin_source_path) ---
+// Path rules from resolve_manifest_path / resolve_plugin_source_path.
 
 function isValidRelativePath(path) {
   if (typeof path !== "string" || path.length === 0) return false;
   const stripped = path.startsWith("./") ? path.slice(2) : null;
   if (stripped === null) return false;
   if (stripped.length === 0) return false;
-  // Must not contain .. or other non-normal components
+  // Reject empty segments and dot segments after removing trailing slashes.
   const segments = stripped.replace(/\/+$/, "").split("/");
   return segments.every((s) => s.length > 0 && s !== ".." && s !== ".");
 }
 
-// --- Marketplace validation (mirrors marketplace.rs) ---
+// Marketplace rules from marketplace.rs.
 
 function validateMarketplace() {
   const marketplacePath = resolve(
@@ -90,7 +90,6 @@ function validateMarketplace() {
 
     const pluginLabel = `Marketplace plugin "${plugin.name}"`;
 
-    // Validate source
     if (!plugin.source || typeof plugin.source !== "object") {
       fail(`${pluginLabel}: \`source\` must be an object`);
       continue;
@@ -111,7 +110,7 @@ function validateMarketplace() {
       continue;
     }
 
-    // Resolve relative to marketplace root (2 levels up from .agents/plugins/marketplace.json)
+    // Source paths start at the repository root, above .agents/plugins/.
     const pluginDir = resolve(root, sourcePath.slice(2));
 
     if (!existsSync(pluginDir) || !statSync(pluginDir).isDirectory()) {
@@ -119,7 +118,6 @@ function validateMarketplace() {
       continue;
     }
 
-    // Validate policy
     const validInstallPolicies = [
       "NOT_AVAILABLE",
       "AVAILABLE",
@@ -146,12 +144,11 @@ function validateMarketplace() {
       }
     }
 
-    // Validate plugin manifest
     validatePluginManifest(pluginDir, plugin.name);
   }
 }
 
-// --- Plugin manifest validation (mirrors manifest.rs) ---
+// Plugin manifest rules from manifest.rs.
 
 const MAX_SKILL_NAME_LENGTH = 64;
 const MAX_FINAL_SHORT_DESCRIPTION_LENGTH = 30;
@@ -187,7 +184,6 @@ function validatePluginManifest(pluginDir, marketplaceName) {
   const manifest = loadJSON(manifestPath, `${label} manifest`);
   if (!manifest) return;
 
-  // Name validation
   if (typeof manifest.name === "string" && manifest.name.length > 0) {
     if (manifest.name !== marketplaceName) {
       fail(
@@ -196,7 +192,6 @@ function validatePluginManifest(pluginDir, marketplaceName) {
     }
   }
 
-  // Validate manifest paths (skills, mcpServers, apps)
   for (const field of ["skills", "mcpServers", "apps"]) {
     const value = manifest[field];
     if (value === undefined || value === null) continue;
@@ -216,7 +211,6 @@ function validatePluginManifest(pluginDir, marketplaceName) {
     }
   }
 
-  // Validate interface
   if (manifest.interface) {
     validatePluginInterface(
       pluginDir,
@@ -226,7 +220,6 @@ function validatePluginManifest(pluginDir, marketplaceName) {
     );
   }
 
-  // Validate skills
   validateSkills(pluginDir, label, manifest.skills);
 }
 
@@ -282,7 +275,6 @@ function validatePluginInterface(pluginDir, label, iface, hasMcpServers) {
     }
   }
 
-  // Validate asset paths
   for (const field of ["composerIcon", "logo"]) {
     const value = iface[field];
     if (!value) continue;
@@ -298,7 +290,6 @@ function validatePluginInterface(pluginDir, label, iface, hasMcpServers) {
     }
   }
 
-  // Validate screenshots
   if (Array.isArray(iface.screenshots)) {
     for (const [i, screenshot] of iface.screenshots.entries()) {
       if (!isValidRelativePath(screenshot)) {
@@ -316,7 +307,6 @@ function validatePluginInterface(pluginDir, label, iface, hasMcpServers) {
     }
   }
 
-  // Validate defaultPrompt
   if (iface.defaultPrompt !== undefined) {
     const prompts = Array.isArray(iface.defaultPrompt)
       ? iface.defaultPrompt
@@ -352,7 +342,7 @@ function validatePluginInterface(pluginDir, label, iface, hasMcpServers) {
   }
 }
 
-// --- Skill validation (mirrors quick_validate.py) ---
+// Skill rules from quick_validate.py.
 
 function validateSkills(pluginDir, label, skillsPath) {
   const skillsDir = skillsPath
@@ -433,8 +423,6 @@ function parseFrontmatter(block) {
   }
   return fields;
 }
-
-// --- Main ---
 
 validateMarketplace();
 

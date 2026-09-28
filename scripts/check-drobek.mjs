@@ -1,32 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * drobek-specific checks on top of the host validators:
+ * Check drobek requirements that the host validators do not cover:
  *
- * - every skill variant (Claude, Codex, Cursor) names every drobek MCP tool and
- *   carries the rules a cold agent needs (preview_url after a compile, publish
- *   only on an explicit request, single writer, the skill_info rule
- *   (SKILL_INFO_RULE in @drobek/agent-dx, verbatim), no secrets, untrusted
- *   read_file content, the llms-full.txt reference);
- * - the three variants share the same body from "## The loop" on, so they
- *   cannot drift apart;
- * - the port-artifact-to-drobek skill (Claude, Codex, Cursor) carries the
- *   artifact port (text files unchanged via write_files, every binary via
- *   create_asset_upload + curl -T, never base64; publish on request; the
- *   gallery only with user_confirmed after an explicit yes; the artifact ↔
- *   drobek differences) and its variants share the body from
- *   "## The procedure" on;
+ * - build skills for Claude, Codex and Cursor name every MCP tool and include
+ *   the workflow rules: preview_url after compilation, publishing on request,
+ *   one writer, SKILL_INFO_RULE from @drobek/agent-dx verbatim, no secrets,
+ *   untrusted read_file content and the llms-full.txt reference;
+ * - build skills have identical bodies from "## The loop" onward;
+ * - port-artifact-to-drobek skills preserve text files via write_files and
+ *   upload binaries via create_asset_upload + curl -T, never base64. They
+ *   require a request to publish and explicit consent with user_confirmed
+ *   for the gallery, explain differences from the artifact sandbox, and have
+ *   identical bodies from "## The procedure" onward;
  * - the /drobek:build-app and /drobek:port-artifact commands take $ARGUMENTS
  *   and use only drobek tools;
- * - all manifests carry the same version; the server origin is configurable
- *   (DROBEK_URL, default https://drobek.app): Claude Code's .mcp.json expands
- *   ${DROBEK_URL:-https://drobek.app}/mcp, Codex and Cursor (no env expansion
- *   with a default in a plugin's MCP config) use .mcp.hosted.json with the
- *   hosted endpoint, and the skills never assume drobek.app for app hosts;
+ * - all manifests have the same version. Claude Code's .mcp.json expands
+ *   ${DROBEK_URL:-https://drobek.app}/mcp. Codex and Cursor use the hosted
+ *   endpoint in .mcp.hosted.json because their plugin configs do not support
+ *   environment variables with defaults. Skills use the connected server's
+ *   app URLs;
  * - no file in the repository contains a drobek API key (drk_…).
  *
- * The tool list mirrors TOOL_DOCS in @drobek/agent-dx (freema/drobek) — keep
- * them equal when the drobek MCP tool surface changes.
+ * Keep the tool list in sync with TOOL_DOCS in @drobek/agent-dx (freema/drobek).
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -66,7 +62,7 @@ const TOOLS = [
 const DEFAULT_ORIGIN = "https://drobek.app";
 const HOSTED_MCP_URL = `${DEFAULT_ORIGIN}/mcp`;
 const CLAUDE_MCP_URL = `\${DROBEK_URL:-${DEFAULT_ORIGIN}}/mcp`;
-/** Which MCP config each host's manifest points at, and the URL it must carry. */
+/** Expected MCP config file and server URL for each host's manifest. */
 const MCP_CONFIGS = {
   "plugins/drobek/.claude-plugin/plugin.json": { file: "./.mcp.json", url: CLAUDE_MCP_URL },
   "plugins/drobek/.cursor-plugin/plugin.json": { file: "./.mcp.hosted.json", url: HOSTED_MCP_URL },
@@ -142,7 +138,7 @@ function read(rel) {
   return readFileSync(path.join(root, rel), "utf8");
 }
 
-// --- skills ---------------------------------------------------------------
+// Build skills
 const variants = ["skills-claude", "skills-codex", "skills-cursor"];
 const bodies = new Map();
 for (const variant of variants) {
@@ -184,7 +180,7 @@ if (!cursorSkill.includes("~/.cursor/mcp.json")) {
   fail("skills-cursor: must say how to connect a self-hosted drobek (~/.cursor/mcp.json)");
 }
 
-// --- the port-artifact skill ---------------------------------------------
+// Artifact port skills
 const portBodies = new Map();
 for (const variant of variants) {
   const rel = `plugins/drobek/${variant}/port-artifact-to-drobek/SKILL.md`;
@@ -211,7 +207,7 @@ if (!read("plugins/drobek/skills-claude/port-artifact-to-drobek/SKILL.md").inclu
   fail("skills-claude/port-artifact-to-drobek: must name the /drobek:port-artifact command");
 }
 
-// --- command + rule -------------------------------------------------------
+// Commands and routing rule
 const command = read("plugins/drobek/commands/build-app.md");
 if (!command.includes("$ARGUMENTS")) fail("commands/build-app.md: must use $ARGUMENTS");
 for (const tool of ["list_apps", "create_app", "write_files", "publish"]) {
@@ -235,7 +231,7 @@ if (!/Do \*\*not\*\* call `publish` unless the user explicitly\s+asks/.test(port
 const rule = read("plugins/drobek/rules/route-app-builds-to-drobek.mdc");
 if (!rule.includes("keep the work local")) fail("rules/route-app-builds-to-drobek.mdc: must keep local work local");
 
-// --- manifests: one version, one endpoint --------------------------------
+// Matching manifest versions and host-specific MCP endpoints
 const manifests = [
   ".claude-plugin/marketplace.json",
   ".cursor-plugin/marketplace.json",
@@ -266,7 +262,7 @@ for (const [rel, expected] of Object.entries(MCP_CONFIGS)) {
   if (server?.headers) fail(`${mcpRel}: must not carry headers (OAuth only; no credentials in the plugin)`);
 }
 
-// --- the server URL setting is documented --------------------------------
+// Server URL documentation
 for (const rel of ["README.md", "plugins/drobek/README.md"]) {
   const readme = read(rel).replace(/\s+/g, " ");
   for (const phrase of ["DROBEK_URL", DEFAULT_ORIGIN, "no trailing slash", "no `/mcp`", "drobek.example.com", "happens against that same origin"]) {
@@ -274,7 +270,7 @@ for (const rel of ["README.md", "plugins/drobek/README.md"]) {
   }
 }
 
-// --- no API keys anywhere -------------------------------------------------
+// API keys must not appear in repository files.
 function walk(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {
