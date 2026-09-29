@@ -46,7 +46,9 @@ restart Codex. Do not work around a missing connection with local files.
    and the apps across them (`app_id`, `name`,
    `preview_url`, `latest_version`, `compile_status`, `locked_by`). If the
    user means an existing app, take its `app_id` from here, call
-   `get_app({ app_id })` and continue at step 3.
+   `get_app({ app_id })` and continue at step 3. Its `next` names the first
+   step to take: before creating or changing an app, call
+   `skill_info('start')` when it is listed.
 2. `create_app({ name, template?, workspace? })` creates the app. `template` is
    `"react-ts"` (the default: `index.html`, `src/main.tsx`, `src/styles.css`,
    `drobek.json`) or `"html"` (a single `index.html`). `workspace` is a
@@ -87,7 +89,10 @@ restart Codex. Do not work around a missing connection with local files.
 6. Publish only when the user explicitly asks ("publish it", "make it
    live", "put it in production"): `publish({ app_id })` puts the newest
    version that compiled on the production URL (`version` picks an older one
-   for a production rollback). Give the user the returned `published_url`. Never
+   for a production rollback). The app's uploaded assets are frozen for that
+   version: `assets: "draft"` says the set came from the current uploads, so an
+   upload changed later reaches production with the next publish. Give the
+   user the returned `published_url`. Never
    publish on your own initiative. The preview URL is for showing work in
    progress. `publish` needs the `publish` scope; if the tool is not in your
    tool list, tell the user to reconnect the drobek server with `publish`
@@ -152,6 +157,10 @@ restart Codex. Do not work around a missing connection with local files.
   - `skill_info()` lists the skills with a "use when…" sentence; an empty
     list means this server has no backends. Build a self-contained
     front-end and keep state in the browser (for example `localStorage`).
+  - State for one visitor who has not signed in (a game save, settings)
+    belongs in `localStorage`: the `data` module has no identity for an
+    anonymous visitor. `drobek.data` is for shared data and signed-in users'
+    own records; send only what others should see (a score) to a collection.
   - Besides the module skills (`auth`, `data`, `forms`, `email`, `files`,
     `proxy`, depending on which are active) the list has general skills:
     `start` (files, `drobek.json`, writing, previewing and publishing),
@@ -165,7 +174,8 @@ restart Codex. Do not work around a missing connection with local files.
     the app (`config` holds only the keys you change). A sensitive change
     comes back `applied: false` with `pending_confirmation` and a
     `confirm_url`. Give the user that link and explain the change. It applies
-    only after they confirm it in the drobek dashboard.
+    only after they confirm it in the drobek dashboard; until then a new
+    collection it declares answers 409 `pending_confirmation`.
   - An opt-in module (`availability: "opt-in"` in `skill_info()`) works only
     in the workspaces the server operator enabled it for:
     `skill_info({ name, app_id })` says `enabled_for_workspace`, `get_app`
@@ -202,6 +212,16 @@ WOFF, WOFF2; no transcoding), `asset_quota_exceeded`, `asset_path_taken` (an
 app file at that path wins), `upload_token_invalid` (the URL was used or
 expired; request a new one). To move a Claude artifact to drobek, follow the
 `port-artifact-to-drobek` skill.
+
+## Installable app (home screen)
+
+For an app people add to their home screen: write `manifest.webmanifest`
+(`name`, `start_url`, `display: "standalone"` or `"fullscreen"`, `icons`) with
+`write_files` and link it from `index.html`. Icons are PNG (iOS ignores SVG
+home-screen icons), so upload them with `create_asset_upload`; add
+`<link rel="apple-touch-icon">` and `viewport-fit=cover` with safe-area
+padding. Icons reach production with the next publish, and the user installs
+from the `published_url`, not the preview.
 
 ## Custom domains
 
@@ -264,6 +284,8 @@ the details.
 - Roll back with `restore_version({ app_id, version })`: it creates a new
   version that is an exact copy of an old one (history is never rewritten).
   `get_app` lists the versions to choose from.
+- A result may carry `warnings`: `unknown_argument` means you passed a
+  parameter the tool does not have; it was ignored, so do not rely on it.
 - A failed call returns `{ code, message, hint }`. Follow the `hint`. `busy`: retry the same call in a few seconds. `not_found`: re-check
   the ids with `list_apps`. `forbidden`: the user is a viewer in that
   workspace. `invalid_params` / `invalid_path` / `limit_exceeded`: fix the
