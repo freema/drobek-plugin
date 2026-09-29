@@ -16,7 +16,7 @@ The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
 `set_gallery_listing`, `duplicate_app`, `list_domains`, `add_domain`, `verify_domain`,
 `set_primary_domain`, `remove_domain`, `list_upstreams`, `register_upstream`,
-`remove_upstream` and `set_workspace_publishing` (server super-admins only).
+`remove_upstream`, `sync_now` and `set_workspace_publishing` (server super-admins only).
 Your client may add a prefix to tool names, for example
 `mcp__plugin_drobek_drobek__create_app`. The tool is the same.
 
@@ -46,7 +46,9 @@ restart Codex. Do not work around a missing connection with local files.
    and the apps across them (`app_id`, `name`,
    `preview_url`, `latest_version`, `compile_status`, `locked_by`). If the
    user means an existing app, take its `app_id` from here, call
-   `get_app({ app_id })` and continue at step 3.
+   `get_app({ app_id })` and continue at step 3. Its `next` names the first
+   step to take: before creating or changing an app, call
+   `skill_info('start')` when it is listed.
 2. `create_app({ name, template?, workspace? })` creates the app. `template` is
    `"react-ts"` (the default: `index.html`, `src/main.tsx`, `src/styles.css`,
    `drobek.json`) or `"html"` (a single `index.html`). `workspace` is a
@@ -57,12 +59,26 @@ restart Codex. Do not work around a missing connection with local files.
    file rules, import map, limits and other requirements.
 3. `write_files({ app_id, files, reasoning })` saves the files. `files` holds 1–20
    changes applied on top of the latest version: `{ path, content }` writes the
-   full content of a text file (never a diff), `{ path, delete: true }` removes
-   one; files you do not mention are kept. `reasoning` is one line
+   full content of a text file, `{ path, delete: true }` removes one, and
+   `{ path, edits: [{ old_string, new_string, replace_all? }] }` changes a few
+   lines of an existing file without resending it; files you do not mention
+   are kept. Each `old_string` must match the file exactly once, whitespace
+   included (add surrounding lines to make it unique, or set
+   `replace_all: true`); a file's 1–50 edits apply in order, and the three
+   kinds mix in one call. An edit that does not apply refuses the WHOLE call
+   with `edit_mismatch` (`path`, 0-based `edit_index`, `reason`) and nothing
+   is written: `read_file` the file, fix that edit and send the call again.
+   New files always go as `content`. The result's `base_version` is the
+   version your changes were applied to. `reasoning` is one line
    (≤ 300 characters) shown in the version history. Each call creates one
    version and compiles it, so change dependent files in the same call.
    Build the whole first version in one call when it fits in 20 files.
-4. Read `compile` in the response.
+4. Read `compile` and `readiness` in the response. `readiness.warnings`
+   (`{ code, file?, line?, message, hint }`) never block a write or a publish;
+   fix them before the user publishes. The server type-checks TypeScript in
+   the background: `readiness.typecheck` is `"pending"` right after the write,
+   and a later `get_app` shows `type_error` warnings (`file`, `line`,
+   `TS<code>: …`). Fix those like compile errors.
    - `compile.ok: true`: give the user the `preview_url`. Do this after every
      successful compile.
    - `compile.ok: false`: the version is saved, but the preview keeps serving
@@ -87,7 +103,10 @@ restart Codex. Do not work around a missing connection with local files.
 6. Publish only when the user explicitly asks ("publish it", "make it
    live", "put it in production"): `publish({ app_id })` puts the newest
    version that compiled on the production URL (`version` picks an older one
-   for a production rollback). Give the user the returned `published_url`. Never
+   for a production rollback). The app's uploaded assets are frozen for that
+   version: `assets: "draft"` says the set came from the current uploads, so an
+   upload changed later reaches production with the next publish. Give the
+   user the returned `published_url`. Never
    publish on your own initiative. The preview URL is for showing work in
    progress. `publish` needs the `publish` scope; if the tool is not in your
    tool list, tell the user to reconnect the drobek server with `publish`
@@ -152,6 +171,10 @@ restart Codex. Do not work around a missing connection with local files.
   - `skill_info()` lists the skills with a "use when…" sentence; an empty
     list means this server has no backends. Build a self-contained
     front-end and keep state in the browser (for example `localStorage`).
+  - State for one visitor who has not signed in (a game save, settings)
+    belongs in `localStorage`: the `data` module has no identity for an
+    anonymous visitor. `drobek.data` is for shared data and signed-in users'
+    own records; send only what others should see (a score) to a collection.
   - Besides the module skills (`auth`, `data`, `forms`, `email`, `files`,
     `proxy`, depending on which are active) the list has general skills:
     `start` (files, `drobek.json`, writing, previewing and publishing),
@@ -165,7 +188,8 @@ restart Codex. Do not work around a missing connection with local files.
     the app (`config` holds only the keys you change). A sensitive change
     comes back `applied: false` with `pending_confirmation` and a
     `confirm_url`. Give the user that link and explain the change. It applies
-    only after they confirm it in the drobek dashboard.
+    only after they confirm it in the drobek dashboard; until then a new
+    collection it declares answers 409 `pending_confirmation`.
   - An opt-in module (`availability: "opt-in"` in `skill_info()`) works only
     in the workspaces the server operator enabled it for:
     `skill_info({ name, app_id })` says `enabled_for_workspace`, `get_app`
@@ -202,6 +226,16 @@ WOFF, WOFF2; no transcoding), `asset_quota_exceeded`, `asset_path_taken` (an
 app file at that path wins), `upload_token_invalid` (the URL was used or
 expired; request a new one). To move a Claude artifact to drobek, follow the
 `port-artifact-to-drobek` skill.
+
+## Installable app (home screen)
+
+For an app people add to their home screen: write `manifest.webmanifest`
+(`name`, `start_url`, `display: "standalone"` or `"fullscreen"`, `icons`) with
+`write_files` and link it from `index.html`. Icons are PNG (iOS ignores SVG
+home-screen icons), so upload them with `create_asset_upload`; add
+`<link rel="apple-touch-icon">` and `viewport-fit=cover` with safe-area
+padding. Icons reach production with the next publish, and the user installs
+from the `published_url`, not the preview.
 
 ## Custom domains
 
@@ -245,6 +279,19 @@ in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
 `remove_upstream` needs `user_confirmed: true`. `skill_info('proxy')` has
 the details.
 
+Data from an API that should refresh on its own (scores, prices, fixtures, a
+feed) goes through the `sync` module: assign the upstream with
+`configure_module('proxy', { upstreams: { feed: { rules: { call: "none" } } } })`,
+declare the collection in `data`, then `configure_module('sync', { sources:
+{ players: { upstream: "feed", path: "/v1/players", items: "data.players",
+collection: "players", every: "15m", mode: "replace" } } })`. The owner
+confirms the source; the minimum interval is 5 minutes. Test it with
+`sync_now({ app_id, source: "players" })` (a failed run returns
+`status: "failed"` with its error and changes nothing) and read the run
+history with `get_logs({ app_id, kind: "sync" })`. The app reads the
+collection with `drobek.data`; the API key never reaches the browser or you.
+`skill_info('sync')` has the details.
+
 ## Rules
 
 - A write takes the app's lease for 3 minutes, renewed by each subsequent
@@ -264,6 +311,8 @@ the details.
 - Roll back with `restore_version({ app_id, version })`: it creates a new
   version that is an exact copy of an old one (history is never rewritten).
   `get_app` lists the versions to choose from.
+- A result may carry `warnings`: `unknown_argument` means you passed a
+  parameter the tool does not have; it was ignored, so do not rely on it.
 - A failed call returns `{ code, message, hint }`. Follow the `hint`. `busy`: retry the same call in a few seconds. `not_found`: re-check
   the ids with `list_apps`. `forbidden`: the user is a viewer in that
   workspace. `invalid_params` / `invalid_path` / `limit_exceeded`: fix the
