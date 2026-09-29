@@ -60,12 +60,23 @@ work around a missing connection with local files.
    file rules, import map, limits and other requirements.
 3. `write_files({ app_id, files, reasoning })` saves the files. `files` holds 1–20
    changes applied on top of the latest version: `{ path, content }` writes the
-   full content of a text file (never a diff), `{ path, delete: true }` removes
-   one; files you do not mention are kept. `reasoning` is one line
+   full content of a text file, `{ path, delete: true }` removes one, and
+   `{ path, edits: [{ old_string, new_string, replace_all? }] }` changes a few
+   lines of an existing file without resending it; files you do not mention
+   are kept. Each `old_string` must match the file exactly once, whitespace
+   included (add surrounding lines to make it unique, or set
+   `replace_all: true`); a file's 1–50 edits apply in order, and the three
+   kinds mix in one call. An edit that does not apply refuses the WHOLE call
+   with `edit_mismatch` (`path`, 0-based `edit_index`, `reason`) and nothing
+   is written: `read_file` the file, fix that edit and send the call again.
+   New files always go as `content`. The result's `base_version` is the
+   version your changes were applied to. `reasoning` is one line
    (≤ 300 characters) shown in the version history. Each call creates one
    version and compiles it, so change dependent files in the same call.
    Build the whole first version in one call when it fits in 20 files.
-4. Read `compile` in the response.
+4. Read `compile` and `readiness` in the response. `readiness.warnings`
+   (`{ code, file?, line?, message, hint }`) never block a write or a publish;
+   fix them before the user publishes.
    - `compile.ok: true`: give the user the `preview_url`. Do this after every
      successful compile.
    - `compile.ok: false`: the version is saved, but the preview keeps serving
