@@ -16,7 +16,7 @@ The tools are `list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `create_asset_upload`, `list_assets`, `delete_asset`, `publish`,
 `set_gallery_listing`, `duplicate_app`, `list_domains`, `add_domain`, `verify_domain`,
 `set_primary_domain`, `remove_domain`, `list_upstreams`, `register_upstream`,
-`remove_upstream` and `set_workspace_publishing` (server super-admins only).
+`remove_upstream`, `sync_now` and `set_workspace_publishing` (server super-admins only).
 Your client may add a prefix to tool names, for example
 `mcp__plugin_drobek_drobek__create_app`. The tool is the same.
 
@@ -75,7 +75,10 @@ restart Codex. Do not work around a missing connection with local files.
    Build the whole first version in one call when it fits in 20 files.
 4. Read `compile` and `readiness` in the response. `readiness.warnings`
    (`{ code, file?, line?, message, hint }`) never block a write or a publish;
-   fix them before the user publishes.
+   fix them before the user publishes. The server type-checks TypeScript in
+   the background: `readiness.typecheck` is `"pending"` right after the write,
+   and a later `get_app` shows `type_error` warnings (`file`, `line`,
+   `TS<code>: …`). Fix those like compile errors.
    - `compile.ok: true`: give the user the `preview_url`. Do this after every
      successful compile.
    - `compile.ok: false`: the version is saved, but the preview keeps serving
@@ -275,6 +278,19 @@ in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
 `drobek.proxy.fetch`. `list_upstreams` shows what exists;
 `remove_upstream` needs `user_confirmed: true`. `skill_info('proxy')` has
 the details.
+
+Data from an API that should refresh on its own (scores, prices, fixtures, a
+feed) goes through the `sync` module: assign the upstream with
+`configure_module('proxy', { upstreams: { feed: { rules: { call: "none" } } } })`,
+declare the collection in `data`, then `configure_module('sync', { sources:
+{ players: { upstream: "feed", path: "/v1/players", items: "data.players",
+collection: "players", every: "15m", mode: "replace" } } })`. The owner
+confirms the source; the minimum interval is 5 minutes. Test it with
+`sync_now({ app_id, source: "players" })` (a failed run returns
+`status: "failed"` with its error and changes nothing) and read the run
+history with `get_logs({ app_id, kind: "sync" })`. The app reads the
+collection with `drobek.data`; the API key never reaches the browser or you.
+`skill_info('sync')` has the details.
 
 ## Rules
 
