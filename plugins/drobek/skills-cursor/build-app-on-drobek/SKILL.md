@@ -176,7 +176,7 @@ to publish). Do not work around a missing connection with local files.
     anonymous visitor. `drobek.data` is for shared data and signed-in users'
     own records; send only what others should see (a score) to a collection.
   - Besides the module skills (`auth`, `data`, `forms`, `email`, `files`,
-    `proxy`, depending on which are active) the list has general skills:
+    `proxy`, `sync`, `oidc`, depending on which are active) the list has general skills:
     `start` (files, `drobek.json`, writing, previewing and publishing),
     `debug` (compile errors, `get_logs`, 401/403 from a module), `ui`
     (Tailwind from esm.sh, responsive and accessible screens) and
@@ -291,6 +291,23 @@ confirms the source; the minimum interval is 5 minutes. Test it with
 history with `get_logs({ app_id, kind: "sync" })`. The app reads the
 collection with `drobek.data`; the API key never reaches the browser or you.
 `skill_info('sync')` has the details.
+
+## Company sign-in (OIDC)
+
+When the app's users should sign in with their company account (Google
+Workspace, Microsoft Entra ID, Okta, Keycloak, Auth0) instead of an e-mail
+code, the server needs the `oidc` module. Configure it through `auth`:
+`configure_module('auth', { providers: { oidc: { enabled: true, issuer:
+"https://login.example.com", clientId: "…" } } })`. Optional fields are
+`label` (the button text), `prompt`, `trustEmail` and `claims: { email }`.
+Changing `issuer`, `clientId`, `trustEmail` or `claims` waits for the
+owner's confirmation. The owner enters `OIDC_CLIENT_SECRET` in the
+dashboard (never you) and registers the redirect URI
+`<dashboard>/__drobek/auth/callback/oidc` at the provider. For Entra use
+the tenant-specific issuer, not `/common`. In the app, `<LoginGate>` shows
+"Continue with <label>" by itself, or call `drobek.auth.signIn('oidc')`. A
+failed sign-in reaches the app only as `provider_error`; the reason is in the
+server log. `skill_info('oidc')` has the details.
 
 ## Rules
 
