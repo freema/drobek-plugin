@@ -59,7 +59,7 @@ work around a missing connection with local files.
    server). Read the whole briefing before writing code. It defines the stack,
    file rules, import map, limits and other requirements.
 3. `write_files({ app_id, files, reasoning })` saves the files. `files` holds 1–20
-   changes applied on top of the latest version: `{ path, content }` writes the
+   changes (at most 10 MiB per call) applied on top of the latest version: `{ path, content }` writes the
    full content of a text file, `{ path, delete: true }` removes one, and
    `{ path, edits: [{ old_string, new_string, replace_all? }] }` changes a few
    lines of an existing file without resending it; files you do not mention

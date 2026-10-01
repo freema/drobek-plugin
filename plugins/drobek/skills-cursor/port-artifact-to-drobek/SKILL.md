@@ -34,7 +34,7 @@ drobek server under Cursor Settings > Tools & MCP, then stop.
    or folder of files, or `"react-ts"` for a single React component. Read the
    briefing: it has this server's limits.
 3. Call `write_files({ app_id, files, reasoning })` with every text file,
-   keeping its path and content exactly as in the artifact (1–20 files per call; split a bigger folder into several calls). Never
+   keeping its path and content exactly as in the artifact (1–20 files and at most 10 MiB per call; split a bigger folder into several calls). Never
    rewrite a path: the app serves text files and uploaded assets side by side
    at `/<path>`, so `<video src="film.mp4">` and `img/s1.jpg` keep working.
    Until the binaries are uploaded (step 4), `compile.warnings` reports the
