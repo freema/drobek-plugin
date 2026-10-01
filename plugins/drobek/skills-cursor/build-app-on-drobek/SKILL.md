@@ -75,7 +75,10 @@ to publish). Do not work around a missing connection with local files.
    Build the whole first version in one call when it fits in 20 files.
 4. Read `compile` and `readiness` in the response. `readiness.warnings`
    (`{ code, file?, line?, message, hint }`) never block a write or a publish;
-   fix them before the user publishes. The server type-checks TypeScript in
+   fix them before the user publishes. `missing_title`, `missing_description`,
+   `missing_favicon` and `og_image_not_absolute` mean the page's `<head>` lacks
+   what browser tabs, search results and link previews show (see "Browser tab,
+   search results and shared links"). The server type-checks TypeScript in
    the background: `readiness.typecheck` is `"pending"` right after the write,
    and a later `get_app` shows `type_error` warnings (`file`, `line`,
    `TS<code>: …`). Fix those like compile errors. `compile.warnings`
@@ -255,6 +258,32 @@ home-screen icons), so upload them with `create_asset_upload`; add
 `<link rel="apple-touch-icon">` and `viewport-fit=cover` with safe-area
 padding. Icons reach production with the next publish, and the user installs
 from the `published_url`, not the preview.
+
+## Browser tab, search results and shared links
+
+drobek adds nothing to an app's pages: the browser tab, a search result and a
+link preview in a chat app show what the `<head>` of `index.html` (and of each
+other page) says, so write it yourself:
+
+- `<title>` (the app's name) and `<meta name="description" content="…">`: one
+  sentence on what the app does.
+- A favicon: write `favicon.svg` with `write_files` and link it with
+  `<link rel="icon" href="/favicon.svg" type="image/svg+xml">`; a PNG or ICO
+  goes up with `create_asset_upload` and is linked the same way. Without one,
+  the browser's own `/favicon.ico` request is a 404 on every visit (`get_logs`
+  kind `requests`).
+- Link previews: `og:title`, `og:description`, `og:type` (`website`), `og:url`
+  and `og:image`, plus `twitter:card` `summary_large_image` when there is an
+  image. `og:url` and `og:image` are absolute https URLs on the production
+  address (the `published_url` + the path, or the primary custom domain),
+  never the preview. `og:image` is a PNG or JPEG of about 1200×630 uploaded
+  with `create_asset_upload` (link previews do not render SVG); it reaches
+  production with the next publish. No image: leave `og:image` out — the
+  title and description still give a text preview.
+- Search engines: the preview and version hosts send `X-Robots-Tag: noindex`;
+  the production address is indexable. To keep an internal tool out of search
+  results add `<meta name="robots" content="noindex">`; a `robots.txt` only
+  stops crawling, and drobek serves none of its own.
 
 ## Custom domains
 

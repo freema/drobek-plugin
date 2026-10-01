@@ -1,6 +1,6 @@
 {
   "name": "drobek-plugin",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "type": "module",
   "license": "MIT",
   "description": "drobek plugin for Claude Code, Codex and Cursor — your agent builds, previews and publishes web apps in your drobek workspace over MCP.",
@@ -12,7 +12,10 @@
     "cursor",
     "plugin",
     "app-builder",
-    "hosting"
+    "hosting",
+    "vibe-coding",
+    "ai-agents",
+    "self-hosted"
   ],
   "homepage": "https://github.com/freema/drobek-plugin#readme",
   "repository": {
