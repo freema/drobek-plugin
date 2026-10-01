@@ -182,7 +182,8 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `skill_info` | read | read-only | The server's skills: the list, or one skill's Markdown with SDK types, config schema and limits. |
 | `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation. |
 | `query_data` | read | read-only | Records of one of the app's data collections (≤ 100 per call), inside an untrusted envelope. |
-| `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`) or request stats (`requests`). |
+| `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`), request stats (`requests`) or the runs of the app's sync sources (`sync`). |
+| `sync_now` | write | destructive, open world | Runs one of the app's `sync` sources now instead of waiting for its schedule and returns the run; a failed run (`status: "failed"` with its error) changes nothing. |
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app. Upload with `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
 | `delete_asset` | write | destructive, idempotent | Removes one asset. |
@@ -191,7 +192,7 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 | `verify_domain` | write | not destructive, idempotent, open world | Looks both records up; `domain_not_verified` names the missing or wrong one (DNS can take up to 48 hours). |
 | `remove_domain` | write | destructive, idempotent, open world | Detaches a domain. A verified domain requires `user_confirmed: true`. |
 | `list_upstreams` | read (workspace admins) | read-only | The workspace's proxy upstreams: base URL, allowed methods and path prefixes, auth type, whether a key is stored and the apps allowed to call each. |
-| `register_upstream` | write (workspace admins) | not destructive, idempotent | Registers an external API for the proxy module. `auth_type: "none"` registers immediately; `bearer` / `header` return `secret_url`, a prefilled dashboard form where the user enters the key. Keys never pass through MCP. |
+| `register_upstream` | write (workspace admins) | not destructive, idempotent | Registers an external API for the proxy module. `auth_type: "none"` registers immediately; `bearer` / `header` return `secret_url`, a prefilled dashboard form where the user enters the key. Keys never pass through MCP. One upstream is one host: never register in bulk; past the workspace caps the answer is `limit_exceeded` or `rate_limited`. |
 | `remove_upstream` | write (workspace admins) | destructive, idempotent | Removes an upstream and its key with `user_confirmed: true`. Apps calling it stop working immediately. |
 | `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL when the user asks. `publish_blocked` means the operator disabled publishing for the workspace; `publish_not_approved` means operator approval is required. Both errors name the operator in `contact`. |
 | `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery with `user_confirmed: true` after the user agrees, or removes it from the gallery. |
@@ -201,8 +202,8 @@ The server shows each client only the tools its grant allows (`read`, `write`,
 
 ## The skills `skill_info` offers
 
-With the six built-in platform modules active (the production compose default)
-`skill_info()` lists ten skills; a self-hosted server lists the modules it runs.
+With the eight built-in platform modules active (the production default)
+`skill_info()` lists twelve skills; a self-hosted server lists the modules it runs.
 An opt-in module (`availability: "opt-in"`) works only in the workspaces the
 operator enabled it for: `skill_info({ name, app_id })` says
 `enabled_for_workspace`, and `configure_module` answers `module_not_enabled`
@@ -216,6 +217,8 @@ elsewhere.
 | `email` | module | the app must tell its owners about something by e-mail |
 | `files` | module | people upload files the app keeps (photos, PDFs, CSVs) |
 | `proxy` | module | the app calls an external API that needs a secret key |
+| `sync` | module | data from an external API should refresh on its own: a cron or periodic update of scores, prices, a feed (the server never runs app code) |
+| `oidc` | module | people sign in with their company account (Google Workspace, Microsoft Entra ID, Okta, Keycloak, Auth0) |
 | `start` | general | creating or changing an app: files, `drobek.json`, writing, previewing and publishing |
 | `debug` | general | a write did not compile, the preview is broken, or a module call fails |
 | `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
@@ -288,7 +291,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.10 && git push origin v0.2.10
+git tag v0.2.11 && git push origin v0.2.11
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,

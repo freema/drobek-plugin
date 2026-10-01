@@ -37,6 +37,9 @@ Codex, then stop.
    keeping its path and content exactly as in the artifact (1–20 files per call; split a bigger folder into several calls). Never
    rewrite a path: the app serves text files and uploaded assets side by side
    at `/<path>`, so `<video src="film.mp4">` and `img/s1.jpg` keep working.
+   Until the binaries are uploaded (step 4), `compile.warnings` reports the
+   page's references to them as `missing_reference`; that is expected. Any
+   other `missing_reference` is a file the artifact really lacks.
 4. Upload every binary through an upload URL, never base64 through a tool
    call. Get each file's exact size (`stat -c %s film.mp4` on Linux,
    `stat -f %z film.mp4` on macOS), call
@@ -66,7 +69,8 @@ remove it with `delete_asset({ app_id, path })`.
   scripts run). A `<script src>` from cdnjs, unpkg or jsdelivr is blocked:
   load the library as a module from esm.sh
   (`import * as THREE from 'https://esm.sh/three@0.160.0'`) or copy the
-  library file into the app as a text file.
+  library file into the app as a text file. `compile.warnings` reports each
+  such URL as `blocked_by_csp`, with the directive and the fix.
 - A React artifact (one component with `export default`): put it in the
   react-ts template (`src/App.tsx` + a `src/main.tsx` that renders it with
   `createRoot`). Its packages (`lucide-react`, `recharts`, `d3`, `lodash`,

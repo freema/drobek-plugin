@@ -79,7 +79,17 @@ work around a missing connection with local files.
    fix them before the user publishes. The server type-checks TypeScript in
    the background: `readiness.typecheck` is `"pending"` right after the write,
    and a later `get_app` shows `type_error` warnings (`file`, `line`,
-   `TS<code>: …`). Fix those like compile errors.
+   `TS<code>: …`). Fix those like compile errors. `compile.warnings`
+   (`{ code, file, line, text }`, the fix in `text`) never block either; they
+   name references the browser will fail to load. `missing_reference`: a
+   literal same-app path (an HTML `src`/`href`, an icon, a CSS `url()`, a
+   `fetch('/…')`) to a file the version does not have and that is not an
+   uploaded asset, so a 404: add the file (media through
+   `create_asset_upload`) or fix the path. `blocked_by_csp`: a literal URL of
+   another origin that the app's Content Security Policy refuses (`text`
+   names the directive): an external API goes through a proxy upstream, a
+   script or package through its pinned esm.sh URL, and an `http://` URL
+   becomes `https://`.
    - `compile.ok: true`: give the user the `preview_url`. Do this after every
      successful compile.
    - `compile.ok: false`: the version is saved, but the preview keeps serving
@@ -162,7 +172,8 @@ work around a missing connection with local files.
   Video, audio, images and fonts go through `create_asset_upload` (below).
 - The app's Content Security Policy allows scripts only from the app itself
   and https://esm.sh, and `fetch` only to the app's own origin and esm.sh.
-  The browser blocks calls to other APIs. Images, fonts (Google
+  The browser blocks calls to other APIs (`compile.warnings` reports a
+  literal one as `blocked_by_csp`). Images, fonts (Google
   Fonts works), CSS, `<video>` and `<audio>` may come from any https URL;
   `<iframe>` only YouTube (`youtube-nocookie.com`), Vimeo and Google Drive
   embeds.
@@ -176,6 +187,14 @@ work around a missing connection with local files.
     belongs in `localStorage`: the `data` module has no identity for an
     anonymous visitor. `drobek.data` is for shared data and signed-in users'
     own records; send only what others should see (a score) to a collection.
+  - Work on a schedule (a cron, a periodic refresh of data from an external
+    API: scores, prices, fixtures, a feed) is the `sync` module: call
+    `skill_info('sync')`. The server never runs app code, so there are no
+    cron scripts of your own: a sync source fetches JSON from a proxy
+    upstream on an interval into a `data` collection the app reads with
+    `drobek.data`; any computation on that data happens in the browser.
+    When `skill_info()` does not list `sync`, this server runs nothing on a
+    schedule; tell the user instead of promising one.
   - Besides the module skills (`auth`, `data`, `forms`, `email`, `files`,
     `proxy`, `sync`, `oidc`, depending on which are active) the list has general skills:
     `start` (files, `drobek.json`, writing, previewing and publishing),
@@ -277,11 +296,26 @@ in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
 { rules: { call: "user" } } } })` (an unregistered name is refused with
 `invalid_params`, `upstream_not_registered`) and call it with
 `drobek.proxy.fetch`. `list_upstreams` shows what exists;
-`remove_upstream` needs `user_confirmed: true`. `skill_info('proxy')` has
-the details.
+`remove_upstream` needs `user_confirmed: true`.
+
+One upstream is one host (its base URL). When many similar hosts seem needed
+(a feed per region), ask the user first or use one main host; never register
+upstreams in bulk. A workspace holds at most `UPSTREAMS_MAX_PER_WORKSPACE`
+upstreams (20 by default; beyond it `limit_exceeded`) and registers at most
+`UPSTREAM_REGISTRATIONS_PER_HOUR` per hour (20; beyond it `rate_limited`
+with `retry_after_seconds`). Either way, do not retry and do not register
+more hosts: reuse a registered upstream (`list_upstreams`) and tell the user.
+
+The proxy follows an upstream's own redirects on the server when the target
+keeps its scheme, host and port and stays inside the allowed path prefixes
+(for example `/rss` → `/rss/`), at most 3 hops. Any other redirect answers
+502 `upstream_redirect` with `details.location_path`: call that final path
+directly, or ask the workspace admin to allow its prefix or to register the
+other host as its own upstream. `skill_info('proxy')` has the details.
 
 Data from an API that should refresh on its own (scores, prices, fixtures, a
-feed) goes through the `sync` module: assign the upstream with
+feed; what is otherwise a cron job) goes through the `sync` module: assign
+the upstream with
 `configure_module('proxy', { upstreams: { feed: { rules: { call: "none" } } } })`,
 declare the collection in `data`, then `configure_module('sync', { sources:
 { players: { upstream: "feed", path: "/v1/players", items: "data.players",
