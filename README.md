@@ -291,7 +291,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.11 && git push origin v0.2.11
+git tag v0.2.12 && git push origin v0.2.12
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,
