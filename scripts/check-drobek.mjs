@@ -6,7 +6,9 @@
  * - build skills for Claude, Codex and Cursor name every MCP tool and include
  *   the workflow rules: preview_url after compilation, publishing on request,
  *   one writer, SKILL_INFO_RULE from @drobek/agent-dx verbatim, no secrets,
- *   untrusted read_file content and the llms-full.txt reference;
+ *   untrusted read_file content, the compile warnings, scheduled work through
+ *   the sync module, the proxy upstream caps and redirects, and the
+ *   llms-full.txt reference;
  * - build skills have identical bodies from "## The loop" onward;
  * - port-artifact-to-drobek skills preserve text files via write_files and
  *   upload binaries via create_asset_upload + curl -T, never base64. They
@@ -43,6 +45,7 @@ const TOOLS = [
   "configure_module",
   "query_data",
   "get_logs",
+  "sync_now",
   "create_asset_upload",
   "list_assets",
   "delete_asset",
@@ -107,6 +110,15 @@ const REQUIRED_PHRASES = [
   "skill_info({ name, app_id })",
   "`port-artifact-to-drobek`",
   "`not_duplicable`",
+  "`missing_reference`",
+  "`blocked_by_csp`",
+  "`skill_info('sync')`",
+  "The server never runs app code",
+  "never register\nupstreams in bulk",
+  "`UPSTREAMS_MAX_PER_WORKSPACE`",
+  "`UPSTREAM_REGISTRATIONS_PER_HOUR`",
+  "`upstream_redirect`",
+  "`details.location_path`",
 ];
 const PORT_TOOLS = ["create_app", "write_files", "create_asset_upload", "list_assets", "delete_asset", "get_logs", "publish", "set_gallery_listing"];
 const PORT_PHRASES = [
@@ -126,6 +138,8 @@ const PORT_PHRASES = [
   SKILL_INFO_RULE,
   "never assume `drobek.app`",
   "https://drobek.app/llms-full.txt",
+  "`missing_reference`",
+  "`blocked_by_csp`",
 ];
 
 let errors = 0;

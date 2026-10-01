@@ -32,7 +32,9 @@ start a local server.
    (`create_app` lists the available skills); otherwise keep all state in the
    browser.
 4. If `compile.ok` is false, fix each `compile.errors` entry (file, line, column,
-   text) and call `write_files` again until it compiles.
+   text) and call `write_files` again until it compiles. Fix
+   `compile.warnings` too: `missing_reference` is a file the app links to
+   that does not exist, `blocked_by_csp` a URL the browser will refuse.
 5. Reply with the `preview_url` exactly as the tool returned it and a two-line
    summary of what the app does. The user's drobek server may be self-hosted,
    so never build an app URL yourself or assume `drobek.app`.
