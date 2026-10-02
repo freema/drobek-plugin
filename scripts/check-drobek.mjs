@@ -7,8 +7,10 @@
  *   the workflow rules: preview_url after compilation, publishing on request,
  *   one writer, SKILL_INFO_RULE from @drobek/agent-dx verbatim, no secrets,
  *   untrusted read_file content, the compile warnings, scheduled work through
- *   the sync module, the proxy upstream caps and redirects, and the
- *   llms-full.txt reference;
+ *   the sync module, the proxy upstream caps and redirects, the render
+ *   signal, the version rate limits and the workspace source quota, merged
+ *   module confirmations, app passwords and the other actions that stay in
+ *   the dashboard, the super-admin tools, and the llms-full.txt reference;
  * - build skills have identical bodies from "## The loop" onward;
  * - port-artifact-to-drobek skills preserve text files via write_files and
  *   upload binaries via create_asset_upload + curl -T, never base64. They
@@ -37,21 +39,41 @@ const pluginDir = path.join(root, "plugins", "drobek");
 const TOOLS = [
   "list_apps",
   "create_app",
+  "duplicate_app",
   "get_app",
   "read_file",
   "write_files",
   "restore_version",
+  "publish",
+  "set_gallery_listing",
+  "unpublish",
+  "set_visibility",
+  "set_frame_ancestors",
+  "release_lease",
+  "delete_app",
   "skill_info",
   "configure_module",
   "query_data",
+  "create_records",
+  "update_record",
+  "delete_record",
+  "delete_collection",
+  "purge_orphan_records",
   "get_logs",
   "sync_now",
   "create_asset_upload",
   "list_assets",
   "delete_asset",
-  "publish",
-  "set_gallery_listing",
-  "duplicate_app",
+  "list_form_submissions",
+  "delete_form_submission",
+  "list_end_users",
+  "set_end_user_role",
+  "set_end_user_blocked",
+  "sign_out_end_users",
+  "list_uploads",
+  "delete_upload",
+  "remove_module_secret",
+  "list_activity",
   "list_domains",
   "add_domain",
   "verify_domain",
@@ -60,7 +82,17 @@ const TOOLS = [
   "list_upstreams",
   "register_upstream",
   "remove_upstream",
+  "create_workspace",
+  "list_members",
+  "invite_member",
+  "set_member_role",
+  "remove_member",
+  "delete_workspace",
   "set_workspace_publishing",
+  "set_workspace_module",
+  "takedown_app",
+  "restore_app",
+  "set_gallery_hidden",
 ];
 const DEFAULT_ORIGIN = "https://drobek.app";
 const HOSTED_MCP_URL = `${DEFAULT_ORIGIN}/mcp`;
@@ -119,6 +151,16 @@ const REQUIRED_PHRASES = [
   "`UPSTREAM_REGISTRATIONS_PER_HOUR`",
   "`upstream_redirect`",
   "`details.location_path`",
+  "`page_loads: 0`",
+  "`merged_with_pending`",
+  "`password_not_set`",
+  "An app password never passes through MCP",
+  "`rate_limited`",
+  'limit: "WORKSPACE_SOURCE_QUOTA"',
+  'reason: "database_timeout"',
+  "These stay in the drobek dashboard",
+  "deleting the account",
+  "an abuse report",
 ];
 const PORT_TOOLS = ["create_app", "write_files", "create_asset_upload", "list_assets", "delete_asset", "get_logs", "publish", "set_gallery_listing"];
 const PORT_PHRASES = [

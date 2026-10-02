@@ -169,37 +169,74 @@ hosts are `<slug>.<APPS_DOMAIN>` on the connected server. The tool contract is
 ## The drobek MCP tools
 
 The server shows each client only the tools its grant allows (`read`, `write`,
-`publish` on the consent screen). Every tool carries the MCP annotations
-`readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`.
+`publish` on the consent screen); the last five rows appear only for a server
+super-admin. Every tool carries the MCP annotations `readOnlyHint`,
+`destructiveHint`, `idempotentHint` and `openWorldHint`. A call that changes
+what the public sees, e-mails someone or deletes for good requires
+`user_confirmed: true`, which the agent sets only after you say yes.
 
 | Tool | Scope | Annotations | What it does |
 | --- | --- | --- | --- |
 | `list_apps` | read | read-only | You, your workspaces with your role, and the apps in them. Start here. |
 | `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
-| `get_app` | read | read-only | One app: briefing, files, last 20 versions, module configs (secrets as `hasSecret` only), the write lock. |
-| `read_file` | read | read-only | One file of a version, inside an untrusted envelope. |
-| `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. |
+| `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
+| `get_app` | read | read-only | One app: briefing, files, last 20 versions and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
+| `read_file` | read | read-only | One file or up to 20 (`paths`), a line range of each (`offset`, `limit`), or the lines that contain a literal text (`search`), inside an untrusted envelope. |
+| `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. New versions are rate-limited per app and per person; the workspace's versions share a source quota. |
 | `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
+| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL when the user asks. `publish_blocked` means the operator disabled publishing for the workspace; `publish_not_approved` means operator approval is required. Both errors name the operator in `contact`. |
+| `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery with `user_confirmed: true` after the user agrees, or removes it from the gallery. |
+| `unpublish` | publish | destructive, idempotent, open world | Takes the app off its production address and custom domains; the preview keeps serving. Requires `user_confirmed: true`. |
+| `set_visibility` | publish | destructive, idempotent, open world | `public` or `password` on every host of the app. The password is set only in the dashboard (`password_not_set` returns the link); making a protected app public requires `user_confirmed: true`. |
+| `set_frame_ancestors` | write | not destructive, idempotent, open world | Which other sites may embed the app in an `<iframe>` (`'self'` and up to 10 origins; none by default). |
+| `release_lease` | write | not destructive, idempotent | Frees your own write lease so another member's agent can write at once. |
+| `delete_app` | write | destructive, idempotent, open world | Deletes the app: every address answers 404 and it cannot be brought back. Requires `user_confirmed: true`. |
 | `skill_info` | read | read-only | The server's skills: the list, or one skill's Markdown with SDK types, config schema and limits. |
-| `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation. |
+| `configure_module` | write | destructive, idempotent | A platform module's config for one app (a partial merge patch); sensitive changes wait for the owner's confirmation, and a second one joins the change already waiting. |
 | `query_data` | read | read-only | Records of one of the app's data collections (≤ 100 per call), inside an untrusted envelope. |
-| `get_logs` | read | read-only | Browser errors (`runtime`), the compile history (`compile`), request stats (`requests`) or the runs of the app's sync sources (`sync`). |
+| `create_records` | write | not destructive | Stores 1–500 records in a data collection as the app's owner, all or nothing. |
+| `update_record` | write | destructive, idempotent | Merges new fields into one record, or replaces them with `replace: true`. |
+| `delete_record` | write | destructive, idempotent | Deletes one record. |
+| `delete_collection` | write | destructive, idempotent | Deletes a collection with its records. Requires `user_confirmed: true`. |
+| `purge_orphan_records` | write | destructive, idempotent | Deletes the records of collections the data config no longer declares. Requires `user_confirmed: true`. |
+| `get_logs` | read | read-only | Browser errors, files that failed to load and CSP blocks with the render counts (`runtime`), the compile history (`compile`), request stats (`requests`) or the runs of the app's sync sources (`sync`). |
 | `sync_now` | write | destructive, open world | Runs one of the app's `sync` sources now instead of waiting for its schedule and returns the run; a failed run (`status: "failed"` with its error) changes nothing. |
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app. Upload with `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
 | `delete_asset` | write | destructive, idempotent | Removes one asset. |
+| `list_form_submissions` | read | read-only | What visitors sent through the app's forms (the Forms tab), inside an untrusted envelope. |
+| `delete_form_submission` | write | destructive, idempotent | Deletes one form submission. |
+| `list_end_users` | read | read-only | The people who signed in to the app (the Users tab), inside an untrusted envelope. |
+| `set_end_user_role` | write | destructive, idempotent | Makes an end user `admin` or `user`. |
+| `set_end_user_blocked` | write | destructive, idempotent | Blocks or unblocks an end user. |
+| `sign_out_end_users` | write | destructive | Signs every end user of the app out. Requires `user_confirmed: true`. |
+| `list_uploads` | read | read-only | The files the app's end users uploaded (the Uploads tab), inside an untrusted envelope. |
+| `delete_upload` | write | destructive, idempotent | Deletes one end-user upload. |
+| `remove_module_secret` | write | destructive, idempotent | Removes the stored value of one module secret. Requires `user_confirmed: true`; a value is set only in the dashboard. |
+| `list_activity` | read (workspace admins) | read-only | The workspace's audit trail (the Activity page), inside an untrusted envelope. |
 | `list_domains` | read | read-only | The app's custom domains: status (pending / verified), primary, the two DNS records to create and the last check. |
 | `add_domain` | write | not destructive, idempotent | Attaches a domain the user owns and returns the CNAME and TXT records to create. |
 | `verify_domain` | write | not destructive, idempotent, open world | Looks both records up; `domain_not_verified` names the missing or wrong one (DNS can take up to 48 hours). |
+| `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it. Requires `user_confirmed: true`. |
 | `remove_domain` | write | destructive, idempotent, open world | Detaches a domain. A verified domain requires `user_confirmed: true`. |
 | `list_upstreams` | read (workspace admins) | read-only | The workspace's proxy upstreams: base URL, allowed methods and path prefixes, auth type, whether a key is stored and the apps allowed to call each. |
 | `register_upstream` | write (workspace admins) | not destructive, idempotent | Registers an external API for the proxy module. `auth_type: "none"` registers immediately; `bearer` / `header` return `secret_url`, a prefilled dashboard form where the user enters the key. Keys never pass through MCP. One upstream is one host: never register in bulk; past the workspace caps the answer is `limit_exceeded` or `rate_limited`. |
 | `remove_upstream` | write (workspace admins) | destructive, idempotent | Removes an upstream and its key with `user_confirmed: true`. Apps calling it stop working immediately. |
-| `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL when the user asks. `publish_blocked` means the operator disabled publishing for the workspace; `publish_not_approved` means operator approval is required. Both errors name the operator in `contact`. |
-| `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery with `user_confirmed: true` after the user agrees, or removes it from the gallery. |
-| `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
-| `set_primary_domain` | publish | not destructive, idempotent, open world | Makes a verified domain the app's primary address (the production URL redirects there) or clears it. Requires `user_confirmed: true`. |
+| `create_workspace` | write | not destructive, idempotent | Creates a team workspace and makes you its workspace-admin. |
+| `list_members` | read | read-only | A workspace's members and their roles. |
+| `invite_member` | write (workspace admins of a team) | not destructive, open world | E-mails an invite as viewer, editor or workspace-admin. Requires `user_confirmed: true`; the invite link never passes through MCP. |
+| `set_member_role` | write (workspace admins) | not destructive, idempotent | Changes a member's role. |
+| `remove_member` | write (workspace admins; anyone to leave) | destructive, idempotent | Removes a member, or leaves the workspace with your own e-mail. Requires `user_confirmed: true`. |
+| `delete_workspace` | write (workspace admins) | destructive, idempotent | Deletes a team workspace with every app in it. Requires `user_confirmed: true`. |
 | `set_workspace_publishing` | publish (super-admins only) | not destructive, idempotent | Sets a workspace's publishing to `default` (the server mode decides), `allowed` or `blocked`. Requires `user_confirmed: true`. |
+| `set_workspace_module` | write (super-admins only) | destructive, idempotent | Turns an opt-in module on or off for a workspace. Requires `user_confirmed: true`. |
+| `takedown_app` | publish (super-admins only) | destructive, idempotent, open world | Takes an app down for breaking the terms (every address answers 451). Requires `user_confirmed: true`. |
+| `restore_app` | publish (super-admins only) | not destructive, idempotent, open world | Lifts a takedown; the app stays unpublished until its owner publishes. Requires `user_confirmed: true`. |
+| `set_gallery_hidden` | publish (super-admins only) | not destructive, idempotent, open world | Hides an app's gallery entry or lets the gallery show it again. Requires `user_confirmed: true`. |
+
+These stay in the dashboard, with no MCP tool: setting a secret's value or an
+app's password, confirming a pending module change, API keys and agent
+connections, changing the sign-in e-mail and deleting the account.
 
 ## The skills `skill_info` offers
 
@@ -292,7 +329,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.13 && git push origin v0.2.13
+git tag v0.2.14 && git push origin v0.2.14
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,

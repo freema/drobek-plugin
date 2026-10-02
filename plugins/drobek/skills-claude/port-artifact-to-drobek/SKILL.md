@@ -111,9 +111,11 @@ the file. `asset_path_taken`: an app text file holds that path.
 `asset_size_mismatch`: check the size again with `stat` and request a new
 URL. `upload_token_invalid`: the URL was used or expired; request a new one.
 `limit_exceeded`: a text file is too big (inlined base64, a bundled
-library). `secret_in_source`: remove the API key from the artifact's code;
-the owner sets secrets in the drobek dashboard. `user_confirmation_required`:
-ask the user before the gallery call.
+library); with `limit: "WORKSPACE_SOURCE_QUOTA"` the workspace's app
+versions are full and nothing was stored: tell the user, do not retry.
+`secret_in_source`: remove the API key from the artifact's code; the owner
+sets secrets in the drobek dashboard. `user_confirmation_required`: ask the
+user before the gallery call.
 
 Give the user every URL exactly as a tool returned it (`preview_url`,
 `published_url`, `upload_url`); never assume `drobek.app` for an app host.
