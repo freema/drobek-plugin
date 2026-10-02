@@ -52,7 +52,10 @@ if they are missing or answer 401, ask the user to connect and stop.
    `list_assets({ app_id })` lists every binary with its size. Give the user
    the `preview_url` and ask them to check that the video plays and seeks.
    Use `get_logs({ app_id, kind: "runtime" })` to check for errors from their
-   browser. Fix any errors, then write again.
+   browser. Fix any errors, then write again. An artifact rarely has a
+   description, a favicon or link-preview tags (`readiness.warnings`
+   `missing_description`, `missing_favicon`): add them to its `<head>` as the
+   build-app-on-drobek skill describes.
 6. Publish only when the user explicitly asks: call `publish({ app_id })`
    and give them the `published_url`.
 7. Offer the gallery once. Show the exact description (plain text, at

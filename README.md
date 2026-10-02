@@ -1,8 +1,9 @@
 # drobek plugins for coding agents
 
-[drobek](https://github.com/freema/drobek) is an open-source (AGPL) cloud
-workspace for web apps built by agents. Use the hosted instance at
-[drobek.app](https://drobek.app) or run your own server.
+[drobek](https://github.com/freema/drobek) is open-source (AGPL) vibe coding
+hosting: your agent builds web apps, drobek compiles, previews and publishes
+them. Use the hosted instance at [drobek.app](https://drobek.app) or run your
+own server.
 
 The drobek plugin lets Claude Code, Codex or Cursor build apps directly in your
 drobek workspace. The agent writes the files, checks the server's compile result
@@ -291,7 +292,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.12 && git push origin v0.2.12
+git tag v0.2.13 && git push origin v0.2.13
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,
