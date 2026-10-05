@@ -180,10 +180,13 @@ what the public sees, e-mails someone or deletes for good requires
 | `list_apps` | read | read-only | You, your workspaces with your role, and the apps in them. Start here. |
 | `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
 | `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
-| `get_app` | read | read-only | One app: briefing, files, last 20 versions and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
+| `get_app` | read | read-only | One app: briefing, files, last 20 versions (`published`, `preview`, `kept`) and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
 | `read_file` | read | read-only | One file or up to 20 (`paths`), a line range of each (`offset`, `limit`), or the lines that contain a literal text (`search`), inside an untrusted envelope. |
 | `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. New versions are rate-limited per app and per person; the workspace's versions share a source quota. |
 | `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
+| `list_versions` | read | read-only | The version history, newest first, a page at a time (`next_before`), each version flagged `published`, `preview` and `kept`. |
+| `keep_version` | write | not destructive, idempotent | Keeps a version so neither the history retention nor a clean-up deletes it, or stops keeping it; at most `APP_VERSIONS_KEPT_MAX` per app. |
+| `delete_versions` | write | destructive, idempotent | Deletes old versions (or only failed builds) for good and frees storage; the published, preview, kept, rollback, newest and last hour's versions stay. Requires `user_confirmed: true`. |
 | `publish` | publish | destructive, idempotent, open world | Puts a compiled version on the production URL when the user asks. `publish_blocked` means the operator disabled publishing for the workspace; `publish_not_approved` means operator approval is required. Both errors name the operator in `contact`. |
 | `set_gallery_listing` | publish | not destructive, idempotent, open world | Lists a published app in the server's public gallery with `user_confirmed: true` after the user agrees, or removes it from the gallery. |
 | `unpublish` | publish | destructive, idempotent, open world | Takes the app off its production address and custom domains; the preview keeps serving. Requires `user_confirmed: true`. |
@@ -329,7 +332,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.14 && git push origin v0.2.14
+git tag v0.2.15 && git push origin v0.2.15
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,
