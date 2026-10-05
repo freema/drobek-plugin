@@ -84,6 +84,7 @@ const TOOLS = [
   "remove_domain",
   "list_upstreams",
   "register_upstream",
+  "set_upstream_streaming",
   "remove_upstream",
   "create_workspace",
   "list_members",

@@ -29,7 +29,8 @@ The tools, by what they are for:
   `delete_asset`;
 - custom domains: `list_domains`, `add_domain`, `verify_domain`,
   `set_primary_domain`, `remove_domain`;
-- external APIs: `list_upstreams`, `register_upstream`, `remove_upstream`;
+- external APIs: `list_upstreams`, `register_upstream`,
+  `set_upstream_streaming`, `remove_upstream`;
 - workspaces: `create_workspace`, `list_members`, `invite_member`,
   `set_member_role`, `remove_member`, `delete_workspace`;
 - server super-admins only: `set_workspace_publishing`,
@@ -439,19 +440,23 @@ per-app limit; 0 = custom domains are off for the workspace).
 An app calls a third-party API through the `proxy` module, never with a key
 in browser code. A workspace admin registers the upstream once:
 `register_upstream({ workspace, name, base_url, allowed_methods,
-allowed_path_prefixes, auth_type })`. `auth_type: "none"` registers at once.
+allowed_path_prefixes, auth_type, allow_streaming })` (`allow_streaming:
+true` for an LLM API). `auth_type: "none"` registers at once.
 `bearer` / `header` (with `auth_header_name`) answer `registered: false` and
 `secret_url`. Give the user that link to enter the key; never ask for a key
 in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
 { rules: { call: "user" } } } })` (an unregistered name is refused with
 `invalid_params`, `upstream_not_registered`) and call it with
-`drobek.proxy.fetch`. `list_upstreams` shows what exists;
-`remove_upstream` needs `user_confirmed: true`.
+`drobek.proxy.fetch`. `list_upstreams` shows what exists (with
+`allow_streaming`); `remove_upstream` needs `user_confirmed: true`.
 
 An LLM API called with `stream: true` can stream its answer to the page: the
-proxy passes a `text/event-stream` (SSE) answer through event by event when a
-workspace admin enabled streaming on the upstream; otherwise, and for every
-other answer, it arrives whole. `skill_info('proxy')` shows the streamed
+proxy passes a `text/event-stream` (SSE) answer through event by event when
+the upstream allows streaming. Streaming is off by default: a workspace admin
+registers the upstream with `allow_streaming: true` or turns it on with
+`set_upstream_streaming({ workspace, name, allow_streaming })`, which keeps
+its key and app assignments. Otherwise, and for every other answer, it
+arrives whole. `skill_info('proxy')` shows the streamed
 call, its limits and how a cut stream ends.
 
 One upstream is one host (its base URL). When many similar hosts seem needed
@@ -579,7 +584,9 @@ The abuse report queue itself is in the drobek dashboard.
 - `keep_version({ app_id, version, kept })` keeps a version the user wants
   to come back to, so neither the retention nor a clean-up deletes it; at
   most `APP_VERSIONS_KEPT_MAX` (20 by default) per app, past it
-  `limit_exceeded` — ask the user which kept version to stop keeping.
+  `limit_exceeded` — ask the user which kept version to stop keeping
+  (`kept: false`). After `kept: false`, `prunable: true` means the next
+  retention run deletes it; tell the user.
 - `delete_versions({ app_id, up_to, failed_only?, plan_id, user_confirmed })`
   deletes old versions (or only the failed builds) for good and frees the
   workspace's storage at once. The published version, the preview's, kept
@@ -587,10 +594,13 @@ The abuse report queue itself is in the drobek dashboard.
   (`skipped`, by reason). Without `user_confirmed: true` it answers
   `user_confirmation_required` with the plan (`delete`, `count`, `skipped`,
   `plan_id`) and changes nothing: ask
-  "Delete N old versions of <app> for good?", then call again with the same
-  `up_to` / `failed_only`, that `plan_id` and `user_confirmed: true`. It deletes exactly that plan; when
-  the versions that would go changed in between it answers `plan_changed`
-  and deletes nothing — show the new plan and ask again.
+  "Delete N old versions of <app> for good?", then call again with the
+  same `up_to` / `failed_only`, that `plan_id` and `user_confirmed: true`
+  only after the user explicitly said yes, never on your own initiative. It
+  deletes exactly that plan; when the
+  versions that would go changed in between it answers `plan_changed` and
+  deletes nothing — show the new plan and ask again. A taken-down app
+  refuses it (`app_locked_by_admin`).
 - A call that takes `user_confirmed: true` changes what the public sees,
   e-mails someone or deletes for good. Ask first and name exactly what will
   change; set it only after the user's explicit yes to that change, never on
