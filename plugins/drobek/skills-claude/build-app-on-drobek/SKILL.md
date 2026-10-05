@@ -449,6 +449,12 @@ in chat. Then assign it: `configure_module('proxy', { upstreams: { "<name>":
 `drobek.proxy.fetch`. `list_upstreams` shows what exists;
 `remove_upstream` needs `user_confirmed: true`.
 
+An LLM API called with `stream: true` can stream its answer to the page: the
+proxy passes a `text/event-stream` (SSE) answer through event by event when a
+workspace admin enabled streaming on the upstream; otherwise, and for every
+other answer, it arrives whole. `skill_info('proxy')` shows the streamed
+call, its limits and how a cut stream ends.
+
 One upstream is one host (its base URL). When many similar hosts seem needed
 (a feed per region), ask the user first or use one main host; never register
 upstreams in bulk. A workspace holds at most `UPSTREAMS_MAX_PER_WORKSPACE`
@@ -575,13 +581,17 @@ The abuse report queue itself is in the drobek dashboard.
   to come back to, so neither the retention nor a clean-up deletes it; at
   most `APP_VERSIONS_KEPT_MAX` (20 by default) per app, past it
   `limit_exceeded` — ask the user which kept version to stop keeping.
-- `delete_versions({ app_id, up_to, failed_only?, user_confirmed })` deletes
-  old versions (or only the failed builds) for good and frees the
+- `delete_versions({ app_id, up_to, failed_only?, plan_id, user_confirmed })`
+  deletes old versions (or only the failed builds) for good and frees the
   workspace's storage at once. The published version, the preview's, kept
   versions, rollback sets, the newest version and the last hour's stay
   (`skipped`, by reason). Without `user_confirmed: true` it answers
-  `user_confirmation_required` with the plan (`delete`, `count`, `skipped`)
-  and changes nothing: ask "Delete N old versions of <app> for good?".
+  `user_confirmation_required` with the plan (`delete`, `count`, `skipped`,
+  `plan_id`) and changes nothing: ask
+  "Delete N old versions of <app> for good?", then call again with the same
+  `up_to` / `failed_only`, that `plan_id` and `user_confirmed: true`. It deletes exactly that plan; when
+  the versions that would go changed in between it answers `plan_changed`
+  and deletes nothing — show the new plan and ask again.
 - A call that takes `user_confirmed: true` changes what the public sees,
   e-mails someone or deletes for good. Ask first and name exactly what will
   change; set it only after the user's explicit yes to that change, never on

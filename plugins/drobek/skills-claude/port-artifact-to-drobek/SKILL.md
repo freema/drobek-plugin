@@ -90,7 +90,10 @@ remove it with `delete_asset({ app_id, path })`.
   allows).
 - The `window.claude.*` runtime API is unavailable. `window.claude.complete`
   has no replacement; drop the feature or call an LLM API through the proxy
-  module. `window.storage` becomes `localStorage` (one browser) or the data
+  module. With `stream: true` the answer can render as it arrives: the proxy
+  streams a `text/event-stream` (SSE) answer to the page event by event when
+  a workspace admin enabled streaming on the upstream, otherwise it arrives
+  whole (`skill_info('proxy')`). `window.storage` becomes `localStorage` (one browser) or the data
   module (shared). Use the auth module for sign-in and the forms module for
   forms whose responses must reach the owner.
   Before using a backend (login, stored data, forms, email, file uploads, external APIs), call `skill_info` and follow the skill; `create_app`/`get_app` list the available skills.
