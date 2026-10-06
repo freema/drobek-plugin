@@ -180,7 +180,7 @@ what the public sees, e-mails someone or deletes for good requires
 | `list_apps` | read | read-only | You, your workspaces with your role, and the apps in them. Start here. |
 | `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
 | `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
-| `get_app` | read | read-only | One app: briefing, files, last 20 versions (`published`, `preview`, `kept`) and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
+| `get_app` | read | read-only | One app: briefing, files, last 20 versions (`published`, `preview`, `kept`) and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), open and resolved feedback notes, the last 7 days' visits (`traffic`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
 | `read_file` | read | read-only | One file or up to 20 (`paths`), a line range of each (`offset`, `limit`), or the lines that contain a literal text (`search`), inside an untrusted envelope. |
 | `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. New versions are rate-limited per app and per person; the workspace's versions share a source quota. |
 | `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
@@ -202,7 +202,11 @@ what the public sees, e-mails someone or deletes for good requires
 | `delete_record` | write | destructive, idempotent | Deletes one record. |
 | `delete_collection` | write | destructive, idempotent | Deletes a collection with its records. Requires `user_confirmed: true`. |
 | `purge_orphan_records` | write | destructive, idempotent | Deletes the records of collections the data config no longer declares. Requires `user_confirmed: true`. |
-| `get_logs` | read | read-only | Browser errors, files that failed to load and CSP blocks with the render counts (`runtime`), the compile history (`compile`), request stats (`requests`) or the runs of the app's sync sources (`sync`). |
+| `get_logs` | read | read-only | Browser errors, files that failed to load and CSP blocks with the render counts (`runtime`), the compile history (`compile`), request stats (`requests`) the runs of the app's sync sources (`sync`) or the latest incoming webhook deliveries without their bodies (`webhooks`). |
+| `get_analytics` | read | read-only | Page views, estimated visitors (no cookies) and bot views per day of the production URL and custom domains, with the top pages and referrer hosts, inside an untrusted envelope. |
+| `list_feedback` | read | read-only | The notes workspace members left with the preview's Feedback button, each pinned to a version, page and spot, inside an untrusted envelope. |
+| `resolve_feedback` | write | not destructive, idempotent | Resolves a feedback note with a short note on what changed, or reopens it (editor+). |
+| `delete_feedback` | write | destructive, idempotent | Deletes a feedback note for good (its author or a workspace admin), only with `user_confirmed: true` after the user's explicit yes. |
 | `sync_now` | write | destructive, open world | Runs one of the app's `sync` sources now instead of waiting for its schedule and returns the run; a failed run (`status: "failed"` with its error) changes nothing. |
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app. Upload with `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
@@ -333,7 +337,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.15 && git push origin v0.2.15
+git tag v0.2.16 && git push origin v0.2.16
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,

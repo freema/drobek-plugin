@@ -12,7 +12,7 @@ ask what the app should do before creating anything. Follow the
 `build-app-on-drobek` skill. Work only through the `drobek` MCP server's tools
 (`list_apps`, `create_app`, `get_app`, `read_file`, `write_files`,
 `restore_version`, `list_versions`, `skill_info`, `configure_module`, `query_data`, `get_logs`,
-`publish`). Do not write the app's files to the local filesystem, run npm or
+`list_feedback`, `resolve_feedback`, `publish`). Do not write the app's files to the local filesystem, run npm or
 start a local server.
 
 1. `list_apps({})` to confirm the connection and see the user's workspaces. If
