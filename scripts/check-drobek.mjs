@@ -17,7 +17,11 @@
  *   require a request to publish and explicit consent with user_confirmed
  *   for the gallery, explain differences from the artifact sandbox, and have
  *   identical bodies from "## The procedure" onward;
- * - the /drobek:build-app and /drobek:port-artifact commands take $ARGUMENTS
+ * - port-app-to-drobek skills pin esm.sh packages with ?deps=react, resolve
+ *   the @/ alias with drobek.json paths, upload binaries via
+ *   create_asset_upload + curl -T, publish only on request, and have
+ *   identical bodies from "## The procedure" onward;
+ * - the /drobek:build-app, /drobek:port-artifact and /drobek:port-app commands take $ARGUMENTS
  *   and use only drobek tools;
  * - all manifests have the same version. Claude Code's .mcp.json expands
  *   ${DROBEK_URL:-https://drobek.app}/mcp. Codex and Cursor use the hosted
@@ -65,8 +69,11 @@ const TOOLS = [
   "get_logs",
   "get_analytics",
   "list_feedback",
+  "get_feedback_screenshot",
   "resolve_feedback",
   "delete_feedback",
+  "request_screenshot",
+  "get_screenshot",
   "sync_now",
   "create_asset_upload",
   "list_assets",
@@ -140,6 +147,7 @@ const REQUIRED_PHRASES = [
   "`debug`",
   "`ui`",
   "`port-artifact`",
+  "`port-app`",
   "never paste a binary as base64",
   "create_asset_upload({ app_id, path, size, content_type? })",
   "curl -T",
@@ -149,6 +157,13 @@ const REQUIRED_PHRASES = [
   "module_not_enabled",
   "skill_info({ name, app_id })",
   "`port-artifact-to-drobek`",
+  "`port-app-to-drobek`",
+  'get_logs({ app_id, kind: "browser"',
+  "`preview_errors",
+  "`previous_version_browser_errors`",
+  '`"reload":\n     false`',
+  '`"browserErrors": false`',
+  '`"screenshots": false`',
   "`not_duplicable`",
   "`missing_reference`",
   "`blocked_by_csp`",
@@ -192,6 +207,27 @@ const PORT_PHRASES = [
   "https://drobek.app/llms-full.txt",
   "`missing_reference`",
   "`blocked_by_csp`",
+];
+const PORT_APP_TOOLS = ["list_apps", "create_app", "write_files", "skill_info", "configure_module", "create_records", "create_asset_upload", "get_logs", "publish"];
+const PORT_APP_PHRASES = [
+  "the drobek server fetches nothing",
+  "?deps=react@<version>,react-dom@<version>",
+  '"paths": { "@/*": ["src/*"] }',
+  "/main.js",
+  "text/tailwindcss",
+  "never base64 through a tool call",
+  "curl -fsS -T",
+  "`import.meta.env`",
+  "does not port",
+  "Publish only when the user explicitly asks",
+  "skill_info('port-app')",
+  "`port-artifact-to-drobek`",
+  SKILL_INFO_RULE,
+  "never assume `drobek.app`",
+  "https://drobek.app/llms-full.txt",
+  "`unresolved_import`",
+  "`blocked_by_csp`",
+  "`missing_reference`",
 ];
 
 let errors = 0;
@@ -273,6 +309,33 @@ if (!read("plugins/drobek/skills-claude/port-artifact-to-drobek/SKILL.md").inclu
   fail("skills-claude/port-artifact-to-drobek: must name the /drobek:port-artifact command");
 }
 
+// App port skills
+const portAppBodies = new Map();
+for (const variant of variants) {
+  const rel = `plugins/drobek/${variant}/port-app-to-drobek/SKILL.md`;
+  const md = read(rel);
+  if (!/^---\nname: port-app-to-drobek\n/.test(md)) {
+    fail(`${rel}: frontmatter must start with name: port-app-to-drobek`);
+  }
+  for (const tool of PORT_APP_TOOLS) {
+    if (!md.includes(`\`${tool}\``) && !md.includes(`${tool}(`)) fail(`${rel}: does not mention the ${tool} tool`);
+  }
+  for (const phrase of PORT_APP_PHRASES) {
+    if (!md.includes(phrase)) fail(`${rel}: missing required text: ${JSON.stringify(phrase)}`);
+  }
+  const start = md.indexOf("## The procedure");
+  if (start === -1) fail(`${rel}: missing "## The procedure"`);
+  else portAppBodies.set(variant, md.slice(start));
+}
+for (const variant of rest) {
+  if (portAppBodies.has(first) && portAppBodies.has(variant) && portAppBodies.get(first) !== portAppBodies.get(variant)) {
+    fail(`${variant}/port-app-to-drobek: the body from "## The procedure" on differs from ${first} — keep the variants in sync`);
+  }
+}
+if (!read("plugins/drobek/skills-claude/port-app-to-drobek/SKILL.md").includes("/drobek:port-app")) {
+  fail("skills-claude/port-app-to-drobek: must name the /drobek:port-app command");
+}
+
 // Commands and routing rule
 const command = read("plugins/drobek/commands/build-app.md");
 if (!command.includes("$ARGUMENTS")) fail("commands/build-app.md: must use $ARGUMENTS");
@@ -294,8 +357,20 @@ for (const phrase of ["port-artifact-to-drobek", "preview_url", "SAME relative p
 if (!/Do \*\*not\*\* call `publish` unless the user explicitly\s+asks/.test(port)) {
   fail("commands/port-artifact.md: must forbid publishing without an explicit request");
 }
+const portApp = read("plugins/drobek/commands/port-app.md");
+if (!portApp.includes("$ARGUMENTS")) fail("commands/port-app.md: must use $ARGUMENTS");
+for (const tool of ["list_apps", "create_app", "write_files", "create_asset_upload", "skill_info", "publish"]) {
+  if (!portApp.includes(tool)) fail(`commands/port-app.md: does not mention ${tool}`);
+}
+for (const phrase of ["port-app-to-drobek", "preview_url", "?deps=react@<version>", '"paths": { "@/*": ["src/*"] }', "curl -fsS -T", "Never put a binary or base64 into a tool call"]) {
+  if (!portApp.includes(phrase)) fail(`commands/port-app.md: missing required text: ${JSON.stringify(phrase)}`);
+}
+if (!/Do \*\*not\*\* call `publish` unless the user explicitly\s+asks/.test(portApp)) {
+  fail("commands/port-app.md: must forbid publishing without an explicit request");
+}
 const rule = read("plugins/drobek/rules/route-app-builds-to-drobek.mdc");
 if (!rule.includes("keep the work local")) fail("rules/route-app-builds-to-drobek.mdc: must keep local work local");
+if (!rule.includes("port-app-to-drobek")) fail("rules/route-app-builds-to-drobek.mdc: must route app ports to port-app-to-drobek");
 
 // Matching manifest versions and host-specific MCP endpoints
 const manifests = [
@@ -356,4 +431,4 @@ if (errors > 0) {
   console.error(`\ndrobek checks failed with ${errors} error(s).`);
   process.exit(1);
 }
-console.log(`drobek checks passed (${variants.length * 2} skills, 2 commands, ${manifests.length} manifests, version ${[...distinct][0]}).`);
+console.log(`drobek checks passed (${variants.length * 3} skills, 3 commands, ${manifests.length} manifests, version ${[...distinct][0]}).`);

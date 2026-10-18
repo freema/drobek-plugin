@@ -78,6 +78,15 @@ The agent copies the text files unchanged and uploads videos, images and fonts
 to the paths the page already uses. Binary files go through single-use upload
 URLs (`curl -T`), never through the model. The agent then returns the preview URL.
 
+Move a project exported from Lovable, Bolt, v0 or any Vite + React app:
+
+```text
+/drobek:port-app ./my-lovable-app
+```
+
+The agent keeps the paths, pins the packages on esm.sh, loads Tailwind in the
+page and moves Supabase calls to drobek's modules, then returns the preview URL.
+
 For a self-hosted drobek, start Claude Code with `DROBEK_URL` set to its origin
 (see [Server URL](#server-url-drobek_url)).
 
@@ -91,8 +100,9 @@ codex mcp login drobek
 
 `codex mcp login drobek` opens the drobek sign-in in your browser; restart Codex
 afterwards so it loads the drobek tools. Codex has no plugin commands: ask it to
-build an app on drobek, or to move a Claude artifact to drobek (the
-`port-artifact-to-drobek` skill).
+build an app on drobek, to move a Claude artifact to drobek (the
+`port-artifact-to-drobek` skill), or to move a Lovable, Bolt, v0 or Vite + React
+project to drobek (the `port-app-to-drobek` skill).
 
 Codex does not expand environment variables in a plugin's MCP config, so the
 plugin connects the hosted `https://drobek.app/mcp`. For a self-hosted drobek,
@@ -133,9 +143,9 @@ then be set wherever Cursor starts). Sign in when Cursor asks; the server then
 shows as connected under Settings > Tools & MCP.
 
 The plugin in this repository (`.cursor-plugin/`) adds the
-`build-app-on-drobek` and `port-artifact-to-drobek` skills, the
-`route-app-builds-to-drobek` rule and the `build-app` and `port-artifact`
-commands on top of the MCP server. It also bundles the hosted
+`build-app-on-drobek`, `port-artifact-to-drobek` and `port-app-to-drobek`
+skills, the `route-app-builds-to-drobek` rule and the `build-app`,
+`port-artifact` and `port-app` commands on top of the MCP server. It also bundles the hosted
 server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
 `drobek` entry and turn the plugin's server off under Settings > Tools & MCP.
 
@@ -149,13 +159,20 @@ server (`https://drobek.app/mcp`); with a self-hosted drobek, keep your own
 | `skills-codex/build-app-on-drobek` | Codex workflow. |
 | `skills-cursor/build-app-on-drobek` | Cursor workflow. |
 | `skills-{claude,codex,cursor}/port-artifact-to-drobek` | Move a Claude artifact to drobek, preserving text files and uploading binaries at the same paths. Covers differences in CSP, runtime APIs (no `window.claude.*`) and limits. |
+| `skills-{claude,codex,cursor}/port-app-to-drobek` | Move a Lovable, Bolt, v0 or Vite + React project to drobek: paths unchanged, packages pinned on esm.sh with one React, the `@/` alias through `drobek.json` `paths`, Tailwind's browser build, Supabase calls moved to drobek modules. |
 | `rules/route-app-builds-to-drobek.mdc` | Cursor rule: use drobek when the user chooses it; keep local work local. |
 | `commands/build-app.md` | `/drobek:build-app <idea>`: build an app and return its preview URL. |
 | `commands/port-artifact.md` | `/drobek:port-artifact <path>` (Cursor: `port-artifact`): move a Claude artifact to drobek and return its preview URL. |
+| `commands/port-app.md` | `/drobek:port-app <path>` (Cursor: `port-app`): move a Lovable, Bolt, v0 or Vite + React project to drobek and return its preview URL. |
 
 The three build skills share the same workflow. The agent calls `list_apps`,
 creates the app with `create_app` and reads its briefing. It then calls
-`write_files`, fixes any `compile.errors` and returns the `preview_url`.
+`write_files`, fixes any `compile.errors` and returns the `preview_url`. The
+open preview reloads itself after each write that compiled, and the agent reads
+the errors the preview raised in your browser (`get_logs` kind `browser`, the
+stack mapped to its own source lines) before guessing what is wrong; it can
+also ask the open preview for a screenshot, which you allow with one click.
+The app's page in the dashboard shows a QR code for opening the app on a phone.
 It calls `publish` only on an explicit request and lists the app in the public
 gallery only after the user agrees (`user_confirmed: true`).
 
@@ -180,9 +197,9 @@ what the public sees, e-mails someone or deletes for good requires
 | `list_apps` | read | read-only | You, your workspaces with your role, and the apps in them. Start here. |
 | `create_app` | write | not destructive | A new app with a compiling version 1 (`react-ts` or `html`), its `preview_url`, the briefing and the skills list. |
 | `duplicate_app` | write | not destructive | Copies a gallery app whose owner allows duplicates into a new, unpublished app in your workspace (published files as version 1); module settings that need a confirmation come back with a `confirm_url`. Only when the user asks. |
-| `get_app` | read | read-only | One app: briefing, files, last 20 versions (`published`, `preview`, `kept`) and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), open and resolved feedback notes, the last 7 days' visits (`traffic`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
+| `get_app` | read | read-only | One app: briefing, files, last 20 versions (`published`, `preview`, `kept`) and their retention, the newest version's readiness (with the background type check) and render signal (`page_loads`, `errors`), the preview's browser errors in short (`preview_errors`), open and resolved feedback notes, the last 7 days' visits (`traffic`), module configs (secrets as `hasSecret` only), visibility, embedding, the write lock. |
 | `read_file` | read | read-only | One file or up to 20 (`paths`), a line range of each (`offset`, `limit`), or the lines that contain a literal text (`search`), inside an untrusted envelope. |
-| `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result. New versions are rate-limited per app and per person; the workspace's versions share a source quota. |
+| `write_files` | write | destructive | Applies 1–20 file changes, creates one version and returns its server-side compile result, plus `previous_version_browser_errors` when the version it replaced raised errors in the preview. New versions are rate-limited per app and per person; the workspace's versions share a source quota. |
 | `restore_version` | write | destructive | A new version that copies an old one (history is never rewritten). |
 | `list_versions` | read | read-only | The version history, newest first, a page at a time (`next_before`), each version flagged `published`, `preview` and `kept`. |
 | `keep_version` | write | not destructive, idempotent | Keeps a version so neither the history retention nor a clean-up deletes it, or stops keeping it; at most `APP_VERSIONS_KEPT_MAX` per app. |
@@ -202,11 +219,14 @@ what the public sees, e-mails someone or deletes for good requires
 | `delete_record` | write | destructive, idempotent | Deletes one record. |
 | `delete_collection` | write | destructive, idempotent | Deletes a collection with its records. Requires `user_confirmed: true`. |
 | `purge_orphan_records` | write | destructive, idempotent | Deletes the records of collections the data config no longer declares. Requires `user_confirmed: true`. |
-| `get_logs` | read | read-only | Browser errors, files that failed to load and CSP blocks with the render counts (`runtime`), the compile history (`compile`), request stats (`requests`) the runs of the app's sync sources (`sync`) or the latest incoming webhook deliveries without their bodies (`webhooks`). |
+| `get_logs` | read | read-only | Browser errors, files that failed to load and CSP blocks with the render counts (`runtime`), the preview's browser errors with the stack mapped to the app's source lines (`browser`), the compile history (`compile`), request stats (`requests`), the runs of the app's sync sources (`sync`) or the latest incoming webhook deliveries without their bodies (`webhooks`). |
 | `get_analytics` | read | read-only | Page views, estimated visitors (no cookies) and bot views per day of the production URL and custom domains, with the top pages and referrer hosts, inside an untrusted envelope. |
-| `list_feedback` | read | read-only | The notes workspace members left with the preview's Feedback button, each pinned to a version, page and spot, inside an untrusted envelope. |
+| `list_feedback` | read | read-only | The notes workspace members left with the preview's Feedback button, each pinned to a version, page and spot (with a short label of the element) and with the size of an attached screenshot, inside an untrusted envelope. |
+| `get_feedback_screenshot` | read | read-only | The screenshot a member attached to a feedback note, as an image the agent can look at, inside an untrusted envelope. |
 | `resolve_feedback` | write | not destructive, idempotent | Resolves a feedback note with a short note on what changed, or reopens it (editor+). |
 | `delete_feedback` | write | destructive, idempotent | Deletes a feedback note for good (its author or a workspace admin), only with `user_confirmed: true` after the user's explicit yes. |
+| `request_screenshot` | write | not destructive | Asks the people with the app's preview open for a screenshot: each open preview tab shows a Capture / Not now bar with the agent's note. At most 20 per app per hour by default. |
+| `get_screenshot` | read | read-only | Where a screenshot request stands (`pending`, `declined`, `expired`) or, once `ready`, the screenshot as an image inside an untrusted envelope. |
 | `sync_now` | write | destructive, open world | Runs one of the app's `sync` sources now instead of waiting for its schedule and returns the run; a failed run (`status: "failed"` with its error) changes nothing. |
 | `create_asset_upload` | write | not destructive | A single-use upload URL (30 minutes) for one video, audio file, image or font at `/<path>` of the app. Upload with `curl -T <file> '<url>'`, never base64. |
 | `list_assets` | read | read-only | The app's assets (path, size, type) and its asset quota. |
@@ -248,8 +268,8 @@ connections, changing the sign-in e-mail and deleting the account.
 
 ## The skills `skill_info` offers
 
-With the eight built-in platform modules active (the production default)
-`skill_info()` lists twelve skills; a self-hosted server lists the modules it runs.
+With all nine built-in platform modules active `skill_info()` lists fourteen
+skills; a server lists only the modules it runs.
 An opt-in module (`availability: "opt-in"`) works only in the workspaces the
 operator enabled it for: `skill_info({ name, app_id })` says
 `enabled_for_workspace`, and `configure_module` answers `module_not_enabled`
@@ -265,10 +285,12 @@ elsewhere.
 | `proxy` | module | the app calls an external API that needs a secret key |
 | `sync` | module | data from an external API should refresh on its own: a cron or periodic update of scores, prices, a feed (the server never runs app code) |
 | `oidc` | module | people sign in with their company account (Google Workspace, Microsoft Entra ID, Okta, Keycloak, Auth0) |
+| `webhooks` | module | another service (payments, code hosting, a form service) must notify the app with signed webhooks, stored in a data collection |
 | `start` | general | creating or changing an app: files, `drobek.json`, writing, previewing and publishing |
 | `debug` | general | a write did not compile, the preview is broken, or a module call fails |
 | `ui` | general | styling and screens: Tailwind from esm.sh, responsive and accessible layout |
 | `port-artifact` | general | moving a Claude artifact to drobek: text files unchanged, binaries through upload URLs |
+| `port-app` | general | moving a Lovable, Bolt, v0 or Vite + React project to drobek: files kept, packages pinned on esm.sh, Tailwind in the page, Supabase calls moved to drobek modules |
 
 ## Server URL (`DROBEK_URL`)
 
@@ -321,8 +343,8 @@ npm run validate
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md));
 - `scripts/check-drobek.mjs`, which checks the tool names and workflow rules,
   matching bodies across the build skills and across the three
-  `port-artifact-to-drobek` variants, and `$ARGUMENTS` and publishing restrictions
-  in both commands. It also checks that manifest versions match, each host uses
+  `port-artifact-to-drobek` and `port-app-to-drobek` variants, and `$ARGUMENTS`
+  and publishing restrictions in the three commands. It also checks that manifest versions match, each host uses
   the correct MCP URL (`DROBEK_URL` for Claude Code, the hosted endpoint for Codex
   and Cursor), both READMEs document `DROBEK_URL`, and the repository contains no
   drobek API keys.
@@ -337,7 +359,7 @@ Bump the version in `package.json` and in every plugin and marketplace manifest
 
 ```sh
 npm pack --dry-run   # the package holds bin/, plugins/, the marketplaces and the docs
-git tag v0.2.16 && git push origin v0.2.16
+git tag v0.2.17 && git push origin v0.2.17
 ```
 
 The tag runs `.github/workflows/release.yml`. The workflow tests the package,
