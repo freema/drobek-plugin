@@ -642,7 +642,7 @@ The abuse report queue itself is in the drobek dashboard.
 - A write takes the app's lease for 3 minutes, renewed by each subsequent
   write. `app_locked` (with the masked `holder` and `expires_at`) means
   another user's agent is writing the app: tell the user who holds it and
-  retry after `expires_at`. Do not retry in a loop. Your own other sessions
+  retry after `expires_at`. Do not retry in a loop. Your own other connections
   never block you. When you are done writing, `release_lease({ app_id })`
   frees your lease so another member's agent can write at once (only your
   own; another user's lease stays).

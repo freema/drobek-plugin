@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "drobek plugins for coding agents — build web apps directly in your drobek cloud workspace.",
-    "version": "0.2.17"
+    "version": "0.2.18"
   },
   "plugins": [
     {
