@@ -103,7 +103,12 @@ to publish). Do not work around a missing connection with local files.
    `write_files`, `restore_version`, `create_app` and `duplicate_app` makes
    one. Past either limit the call answers `rate_limited` with
    `retry_after_seconds` and nothing is stored: tell the user and continue
-   after that time, never retry in a loop. `limit_exceeded` with
+   after that time, never retry in a loop. MCP requests as a whole are
+   limited too: by default 600 a minute per person over all connections and
+   API keys (`MCP_REQUESTS_PER_USER_MINUTE`; the briefing states this
+   server's number). Past it the answer is HTTP 429 with `Retry-After` and
+   `rate_limited` (`retry_after_seconds`) and nothing ran: wait, never
+   loop. `limit_exceeded` with
    `limit: "WORKSPACE_SOURCE_QUOTA"` means the versions of the workspace's
    apps fill its source quota (1 GiB by default) and nothing is stored: tell
    the user (deleting an app the workspace no longer needs frees its share)
